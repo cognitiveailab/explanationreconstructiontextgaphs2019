@@ -1,0 +1,32 @@
+# Worldtree Corpus Summary Statistics/Analysis Properties file
+# LREC 2018
+
+#
+# Input: Questions, Explanation Annotation, and Tablestore
+#
+
+#### NOTE: REMAKE FOLDS WITH CORRECTIONS FROM HARISH
+
+# Tiny question set (only for software development)
+#questionsTrain = annotation/question-topic-classifier/ARC-Elementary-QC+EXPL-Train.only50.tsv
+#questionsEval = annotation/question-topic-classifier/ARC-Elementary-QC+EXPL-Dev.only50.tsv
+#tablestoreIndex = annotation/expl-tablestore-export-2017-08-25-230344/tableindex.txt
+
+
+# The full question set
+questionsTrain = questions/ARC-Elementary-QC+EXPL-Train.tsv
+questionsEval = questions/ARC-Elementary-QC+EXPL-Dev.tsv
+tablestoreIndex = annotation/expl-tablestore-export-2017-08-25-230344/tableindex.txt
+
+# Artificially limit to a small number of questions for debugging
+debug.limitNumQuestions = 20
+
+
+# SVM ranker parameters
+ranker.svm_c = 1.0
+
+# Enabled features
+
+enabledFeatures = TFIDF
+
+

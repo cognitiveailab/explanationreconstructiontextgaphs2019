@@ -1,0 +1,71 @@
+# Entities.yml
+
+- name: n
+  label: Noun
+  priority: ${rulepriority}
+  type: token
+  unit: tag
+  pattern: |
+    /^NN/+
+
+- name: adj
+  label: Adjective
+  priority: ${rulepriority}
+  type: token
+  unit: tag
+  pattern: |
+    /^JJ/+
+
+- name: nounphrase
+  label: NounPhrase
+  priority: 2
+  type: token
+  pattern: |
+    (?<unused> [tag=/^(PRP|DT)$/])? @adj:Adjective? @noun:Noun
+#       [tag=PRP | tag=DT]? [tag=/^JJ/]* [tag=/^NN/]+
+#      [tag=PRP | tag=DT]? @adj:[tag=/^JJ/]* @entity:[tag=/^NN/]+
+
+
+- name: possessivenp
+  label: NounPhrasePossessive
+  priority: 3
+  type: token
+  pattern: |
+    @possessor:NounPhrase [tag=POS] @part:NounPhrase
+
+
+- name: isapattern
+  label: IsAPattern
+  priority: ${rulepriority}
+  type: token
+  pattern: |
+    [lemma=be] [lemma=a] @mod:Adjective? [lemma=kind] [lemma=of] | [lemma=be] [lemma=a] @mod:Adjective? [lemma=type] [lemma=of]
+    #[lemma=be] [lemma=a] @mod:Adjective? [lemma=kind] [lemma=of] | [lemma=be] [lemma=a] @mod:Adjective? [lemma=type] [lemma=of] | [lemma=be] [lemma=a] [!tag=/^NN/] [!lemma=of]
+
+
+- name: isapatterndictionary
+  label: IsAPatternDictionary
+  priority: ${rulepriority}
+  type: token
+  pattern: |
+    [lemma=be]? [lemma=a] @mod:Adjective? [lemma=kind] [lemma=of] | [lemma=be]? [lemma=a] @mod:Adjective? [lemma=type] [lemma=of]
+    #[lemma=be]? [lemma=a] @mod:Adjective? [lemma=kind] [lemma=of] | [lemma=be]? [lemma=a] @mod:Adjective? [lemma=type] [lemma=of] | [lemma=be] [lemma=a] [!tag=/^NN/] [!lemma=of]
+
+
+- name: partofpattern
+  label: PartOfPattern
+  priority: ${rulepriority}
+  type: token
+  pattern: |
+    [lemma=be] [lemma=a]? @mod:Adjective? [lemma=part] [lemma=of]
+    #[lemma=be] [lemma=a]? @mod:Adjective? [lemma=part] [lemma=of] | [lemma=be] [lemma=a]? @mod:Adjective? [lemma=piece] [lemma=of]
+
+- name: partofpatterndictionary
+  label: PartOfPatternDictionary
+  priority: ${rulepriority}
+  type: token
+  pattern: |
+    [lemma=be]? [lemma=a]? @mod:Adjective? [lemma=part] [lemma=of]
+    #[lemma=be]? [lemma=a]? @mod:Adjective? [lemma=part] [lemma=of] | [lemma=be]? [lemma=a]? @mod:Adjective? [lemma=piece] [lemma=of]
+
+#      (be a kind of | be a type of | be a)
