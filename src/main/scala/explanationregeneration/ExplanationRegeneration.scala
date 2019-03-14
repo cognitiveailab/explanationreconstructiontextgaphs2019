@@ -495,7 +495,6 @@ object ExplanationRegeneration {
 
       // Rank based on scores
       explRowPools(i).rank()
-      //explRowPools(i).oldRank()       // manual weights
 
       // Scoring
       // Score the explanation regeneration task for this question
@@ -521,7 +520,7 @@ object ExplanationRegeneration {
     println ("evaluate(): ")
 
     println ("Summary:   (n = " + numSamples + ")")
-    println (summaryAverageScores(sumScores))
+    println (summaryAverageScores(sumScores, numSamples))
 
   }
 
@@ -530,38 +529,20 @@ object ExplanationRegeneration {
   /*
    * Score reporting
    */
-  def summaryAverageScores(sumScores:Counter[String]):String = {
+  def summaryAverageScores(sumScores:Counter[String], numSamples:Double):String = {
     val os = new StringBuilder
 
-    // Step 1: Separate into scores and counts of samples
-    val scores = new Counter[String]
-    val counts = new Counter[String]
-    for (key <- sumScores.keySet) {
-      val value = sumScores.getCount(key)
-      if (key.endsWith("_NUM")) {
-        counts.setCount(key, value)
-      } else {
-        scores.setCount(key, value)
-      }
-
-    }
-
-    // Step 2: Average the scores
+    // Step 1: Average the scores
     val avgScores = new Counter[String]
-    for (key <- scores.keySet) {
-      val scoreSum = scores.getCount(key)
-      val sampleCount = counts.getCount(key + "_NUM")
-      var average:Double = 0.0
-      if (sampleCount > 0) {
-        average = scoreSum / sampleCount
-      }
+    for (key <- sumScores.keySet) {
+      val average = sumScores.getCount(key) / numSamples
       avgScores.setCount(key, average)
     }
 
     println( avgScores.sorted(descending = true) )
 
 
-    // Step 3: Display scores in string
+    // Step 2: Display scores in string
     os.append("MAP: " + avgScores.getCount(SCORE_MAP).formatted("%3.4f") + "\n")
     os.append("\n")
     os.append("MAP_ROLE_CENTRAL:    " + avgScores.getCount(SCORE_MAP_CENTRAL).formatted("%3.4f") + "\n")
@@ -576,7 +557,13 @@ object ExplanationRegeneration {
     os.append("MAP_TABKT_RET/LEX:   " + avgScores.getCount(SCORE_MAP_TABKT_RETLEX).formatted("%3.4f") + "\n")
     os.append("MAP_TABKT_INFSUPP:   " + avgScores.getCount(SCORE_MAP_TABKT_INFSUPP).formatted("%3.4f") + "\n")
     os.append("MAP_TABKT_COMPLEX:   " + avgScores.getCount(SCORE_MAP_TABKT_COMPLEX).formatted("%3.4f") + "\n")
-
+    os.append("\n")
+    os.append("Precision@1          " + avgScores.getCount(SCORE_PRECISIONAT1).formatted("%3.4f") + "\n")
+    os.append("Precision@2          " + avgScores.getCount(SCORE_PRECISIONAT2).formatted("%3.4f") + "\n")
+    os.append("Precision@3          " + avgScores.getCount(SCORE_PRECISIONAT3).formatted("%3.4f") + "\n")
+    os.append("Precision@4          " + avgScores.getCount(SCORE_PRECISIONAT4).formatted("%3.4f") + "\n")
+    os.append("Precision@5          " + avgScores.getCount(SCORE_PRECISIONAT5).formatted("%3.4f") + "\n")
+    os.append("\n")
 
     // Return
     os.toString()

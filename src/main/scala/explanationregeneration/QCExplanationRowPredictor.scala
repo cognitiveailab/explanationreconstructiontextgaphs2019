@@ -9,30 +9,31 @@ import util.CounterIO
 
 import scala.collection.mutable.ArrayBuffer
 
+
 /**
+  * A set of classes that store how often a given table row tends to occur with questions of a specific question classification label.
+  * For example, the table row "boiling means changing from a liquid to a gas by adding heat energy" likely occurs most often
+  * with questions having the MAT_COS_BOILING question classification label than other labels.
+  *
+  * This set of classes stores these distributions, and allows querying them at multiple levels of trunctation
+  * (e.g. probabilities for just MAT, or MAT_COS, instead of the full MAT_COS_BOILING question classification label).
+  *
+  * These distributions are fairly quick to compute for one question, but can take a while when aggregated across
+  * thousands of questions.  Some facilities are provided to save these QC distributions to files (a cache), so that
+  * this cache can be loaded up later to decrease runtime.  Note that the cache can be sizeable (a few gb).
+  *
   * Created by user on 4/10/18.
   */
-
 
 // NOTE: These should rarely be created on their own, but instantiated from the mkQCExplanationRowPredictor() generator (or, loaded from a file)
 // Note: heirLevel = -1 disables QC label truncation, and uses full labels.
 class QCExplanationRowPredictor(val rowDists:ArrayBuffer[QCRowDist], var qcFreq:Counter[String], var roleFreq:Counter[String], tablestore:TableStore, heirLevel:Int) {
-  /*
-  val rowDists = new ArrayBuffer[QCRowDist]
-  val qcFreq = mkQCFreqDist(questionsTrain)
-  val roleFreq = mkRoleFreqDist(questionsTrain)
-*/
-
   // Make a blank, untrained QCExplanationRowPredictor
   // Note: train() must be called after creating this, or it will be empty.
   def this(tablestore:TableStore, heirLevel:Int = -1) {
     this(new ArrayBuffer[QCRowDist], new Counter[String], new Counter[String], tablestore, heirLevel)
   }
 
-/*
-  println ("qcFreq: ")
-  println (qcFreq.sorted(descending=true))
-*/
 
   /*
    * Loading/Saving
@@ -95,39 +96,6 @@ class QCExplanationRowPredictor(val rowDists:ArrayBuffer[QCRowDist], var qcFreq:
     out
   }
 
-/*
-  // unused:
-
-  // this is redundant and should be simplified later
-  // take the totals for each class and the trained qcrowdist and create a
-  // conditional frequency distribution
-  def makeCondFreqDist(classTotal: Counter[String], numDist: Array[QCRowDist]): Array[QCRowDist] = {
-
-    // convert classTotal to array
-    val (theClasses, counts) = classTotal.toSeq.unzip
-
-    // for each row, access the QCDist to alter it
-    for (rowDist <- numDist) {
-      val condFreqDist = rowDist.QCDistFreq
-
-      for (i <- 0 to theClasses.length) {
-
-        if (condFreqDist.contains(theClasses(i))) {
-          // divide each number in QCDist by corresponding value in classTotal
-          //val condFreq = condFreqDist.proportion(theClasses(i))  // only if we change input data structure
-          val condFreq = condFreqDist.getCount(theClasses(i)) / counts(i)
-
-          // set count equal to this value
-          condFreqDist.setCount(theClasses(i), condFreq)
-        }
-
-      }
-    }
-
-    // return array
-    numDist
-  }
-*/
 
   /*
    * Training
@@ -170,22 +138,6 @@ class QCExplanationRowPredictor(val rowDists:ArrayBuffer[QCRowDist], var qcFreq:
     //for row distribution in the set
     // should we add the role prob dist here as well?
     for (rowDist <- rowDists) {
-
-      /*
-      val (rowQCs, counts) = rowDist.QCDistFreq.toSeq.unzip
-      val (rowRoles, roleCounts) = rowDist.roleDistFreq.toSeq.unzip
-      // set each item in map equal to value from FreqDist / QCFreqDist
-      for (i <- 0 until rowQCs.length) {
-      //  if qcFreq.contains(rowQCs(i)) {
-      //    println (s"rowQC at ${i}: " + rowQCs(i))
-      //    println (s"counts at ${i}: " + counts(i))
-      //    println (s"qcFreq counts for ${rowQCs(i)} at ${i}: " + qcFreq.getCount(rowQCs(i)))
-          rowDist.QCDistProb.setCount(rowQCs(i), counts(i) / qcFreq.getCount(rowQCs(i)))
-      //  }
-      }
-
-      */
-
       for (qcLabel <- rowDist.QCDistFreq.keySet) {
         val truncatedQCLabel = mkHeirarchicalLabel(qcLabel)
         val count = rowDist.QCDistFreq.getCount(truncatedQCLabel)        // Total number of times we've observed this row paired with this QC label
@@ -205,10 +157,6 @@ class QCExplanationRowPredictor(val rowDists:ArrayBuffer[QCRowDist], var qcFreq:
       //println ("QCProbDist: " + rowDist.QCDistProb.sorted(descending = true))
 
     }
-
-
-    // Step 2: Calculate probability distributions from frequency distributions
-
 
   }
 

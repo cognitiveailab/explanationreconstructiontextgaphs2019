@@ -12,8 +12,15 @@ import ExplRowPool._
 import scala.collection.mutable
 
 /**
-  * A storage class for evaluating large numbers of tablestore rows for which are most likely to take part in an explanation
-  * for a given question and answer candidate
+  * The gold explanation for a given question in WorldTree takes the form of a list of facts (tablestore rows).
+  * Here, explanation regeneration is framed as a ranking task, where an algorithm must successfully rank the gold
+  * explanation rows for a given question to the top of a list containing all possible facts (i.e. all the facts
+  * present in the tablestore).
+  *
+  * This class makes a list of RowEvals, one for each possible tablestore row, where these RowEvals contain
+  * sets of features that allow them to be compared/ranked, and the gold rows to (ideally) be ranked to the top of the
+  * list.
+  *
   * Created by peter on 3/16/18.
   */
 class ExplRowPool(question:MCExplQuestion, answerCandidate:Int, tablestore:TableStore) {
@@ -29,13 +36,10 @@ class ExplRowPool(question:MCExplQuestion, answerCandidate:Int, tablestore:Table
   /*
    * Ranking
    */
+
+  // Rank each row given it's score
   def rank(): Unit = {
     rowEvals = rowEvals.sortBy(- _.getScore())
-  }
-
-  //## Old
-  def oldRank(): Unit = {
-    rowEvals = rowEvals.sortBy(e => -(e.features.getCount("COS_Q") + e.features.getCount("COS_A") + (e.features.getCount("QC_L0")) ))
   }
 
   // Add scores for each row evaluation generated externally -- e.g., by a ranking classifier
@@ -91,7 +95,6 @@ class ExplRowPool(question:MCExplQuestion, answerCandidate:Int, tablestore:Table
   // MAP, by category (rows from retrieval, inference supporting, or complex inference type tables)
   // MAP, overall
 
-
   def getScores():Counter[String] = {
     val scores = new Counter[String]
 
@@ -109,10 +112,18 @@ class ExplRowPool(question:MCExplQuestion, answerCandidate:Int, tablestore:Table
     scores.setCount(SCORE_MAP_LEXOVERLAP, mapLexOverlap)
     scores.setCount(SCORE_MAP_NOLEXOVERLAP, mapNoOverlap)
 
+
     // Average precision by table knowledge type (retrieval, inference supporting, complex inference)
     scores += averagePrecisionByTableCategory()
 
+    // Precision@N
+    scores.setCount(SCORE_PRECISIONAT1, precisionAtN(1))
+    scores.setCount(SCORE_PRECISIONAT2, precisionAtN(2))
+    scores.setCount(SCORE_PRECISIONAT3, precisionAtN(3))
+    scores.setCount(SCORE_PRECISIONAT4, precisionAtN(4))
+    scores.setCount(SCORE_PRECISIONAT5, precisionAtN(5))
 
+    /*
     // Set single-count counter keys, so that the counter can be added and averaged easily later on
     val keySet = scores.keySet.toArray
     for (key <- keySet) {
@@ -120,9 +131,44 @@ class ExplRowPool(question:MCExplQuestion, answerCandidate:Int, tablestore:Table
         scores.setCount(key + "_NUM", 1.0)
       }
     }
+    */
 
+    println (scores.toString())
     // Return
     scores
+  }
+
+
+
+  /*
+   * Scoring: Precision@N
+   */
+  def precisionAtN(n:Int):Double = {
+    val ranks = ranksOfCorrectRowsHelper(question.expl.toArray, rowEvals.toArray)
+
+    var numCorrect:Double = 0
+    for (i <- 0 until n+1) {
+      println ("Iterations: " + i)
+      if (ranks.contains(i)) {
+        numCorrect += 1
+      }
+    }
+
+    println("numCorrect: " + numCorrect + " + (n = " + n + ")")
+
+
+    var score:Double = 0.0
+    // Case 1: The gold explanation has more than N rows
+    if (question.expl.size > n) {
+      score = (numCorrect / n.toDouble)
+    } else {
+      // Case 2: The gold explanation has less than N rows, so taking (numCorrect/n) would never be able to yield a
+      // perfect score, even if all rows were present.
+      score = (numCorrect / question.expl.size.toDouble)
+    }
+    println ("score@" + n + ": " + score)
+
+    return score
   }
 
 
@@ -245,7 +291,7 @@ class ExplRowPool(question:MCExplQuestion, answerCandidate:Int, tablestore:Table
 
 
     //## Debug:
-    println ("Question and answer lemmas: " + qWords.mkString(", "))
+    //println ("Question and answer lemmas: " + qWords.mkString(", "))
 
     // Step 2: Separate gold explanation rows into those with/without lexical overlap with the question/answer candidate
     val goldExplRowsLexOverlap = new ArrayBuffer[ExplanationRow]()
@@ -480,6 +526,7 @@ class ExplRowPool(question:MCExplQuestion, answerCandidate:Int, tablestore:Table
     os.toString()
   }
 
+
   override def toString():String = {
     val os = new StringBuilder
 
@@ -513,6 +560,10 @@ class ExplRowPool(question:MCExplQuestion, answerCandidate:Int, tablestore:Table
     os.append(" Average Precision (NOLEXOVERLAP): " + mapNoOverlap + "\n")
     os.append(" Average Precision by Table Category: " + averagePrecisionByTableCategory().toString() + "\n")
 
+    for (n <- 1 to 5) {
+      os.append(" Precision@" + n + ": " + precisionAtN(n).formatted("%3.3f") + "\n")
+    }
+
 
     // Return
     os.toString()
@@ -520,7 +571,7 @@ class ExplRowPool(question:MCExplQuestion, answerCandidate:Int, tablestore:Table
 }
 
 
-// Storage class for evaluating a single tablestore row
+// Storage class for storing the features for a single row, as well as generating a single unified score for that row based on those feature values.
 class RowEval(val row:TableRow) {
   val features = new Counter[String]
   private var score:Double = 0.0
@@ -528,10 +579,12 @@ class RowEval(val row:TableRow) {
   /*
    * Scoring
    */
+  // Get this row's score
   def getScore():Double = {
     score
   }
 
+  // Set this row's score (usually from an external classifier, based on this row's features)
   def setScore(newScore:Double): Unit = {
     score = newScore
   }
@@ -610,5 +663,11 @@ object ExplRowPool {
   val SCORE_MAP_TABKT_RETLEX    = "MAP_TABKT_RET/LEX"
   val SCORE_MAP_TABKT_INFSUPP   = "MAP_TABKT_INSUPP"
   val SCORE_MAP_TABKT_COMPLEX   = "MAP_TABKT_COMPLEX"
+
+  val SCORE_PRECISIONAT1        = "PRECISION_AT_1"
+  val SCORE_PRECISIONAT2        = "PRECISION_AT_2"
+  val SCORE_PRECISIONAT3        = "PRECISION_AT_3"
+  val SCORE_PRECISIONAT4        = "PRECISION_AT_4"
+  val SCORE_PRECISIONAT5        = "PRECISION_AT_5"
 
 }
