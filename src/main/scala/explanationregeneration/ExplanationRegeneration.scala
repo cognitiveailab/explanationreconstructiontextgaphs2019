@@ -35,11 +35,6 @@ object ExplanationRegeneration {
   val ROLE_LEXGLUE    = "LEXGLUE"
   val ROLE_BACKGROUND = "BACKGROUND"
 
-  /*
-   * Explanation Row Evaluation
-   */
-
-
 
   /*
    * Term/Document Frequency
@@ -316,7 +311,7 @@ object ExplanationRegeneration {
 
 
   /*
-   * Ranking classifier mechanics
+   * Classifier: Ranking classifier mechanics (feature generation)
    */
   def populateFeatures(question:MCExplQuestion, enabledFeatures:Set[String], tablestore:TableStore, qcRowProbGroup:QCRowProbGroup):ExplRowPool = {
     val features = new Counter[String]
@@ -455,6 +450,10 @@ object ExplanationRegeneration {
   }
 
 
+  /*
+   * Classifier: Ranking classifier mechanics (train/evaluation functions)
+   */
+
   def train(classifier:RankingClassifier[String], questions:Array[MCExplQuestion], enabledFeatures:Set[String], tablestore:TableStore, qcRowProbGroup:QCRowProbGroup): Unit = {
     // Step 1: make dataset
     val (dataset, _) = mkDataset(questions, enabledFeatures, tablestore, None, relabelZeroFeaturePositives = true)
@@ -574,9 +573,9 @@ object ExplanationRegeneration {
 
 
   /*
-     * Supporting functions
-     */
-
+   * Supporting functions
+   */
+  // Converts between question storage classes (one that contains better segmented explanation information)
   def convertToExplQuestions(in:Array[MCQuestion]):Array[MCExplQuestion] = {
     val out = new ArrayBuffer[MCExplQuestion]
     for (i <- 0 until in.size) {
@@ -606,8 +605,9 @@ object ExplanationRegeneration {
 
 
   /*
-     * Distribution of tables across explanations (e.g. taxonomic, 76%, synonymy, 56%, ...)
-     */
+   * Distribution of tables across explanations (e.g. taxonomic, 76%, synonymy, 56%, ...)
+   * This is just for helpful summary statistics to the user, and isn't critical to running the experiment.
+   */
   def calculateTableUseSummary(in:Array[MCExplQuestion], tablestore:TableStore): Unit = {
     var numWithExpl:Double = 0.0
     var explLength:Double = 0.0
