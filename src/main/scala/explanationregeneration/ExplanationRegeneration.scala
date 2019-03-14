@@ -28,7 +28,6 @@ object ExplanationRegeneration {
   val logger = LoggerFactory.getLogger(classOf[ExplanationRegeneration])
 
   // Word filtering by content tags (noun, verb, adjective, adverb, preposition)
-  //val contentTags = Array("NN", "VB", "JJ", "RB", "IN")
   val contentTags = Array("NN", "VB", "JJ", "RB")
 
   val ROLE_CENTRAL    = "CENTRAL"
@@ -802,8 +801,6 @@ object ExplanationRegeneration {
     println ("\n\n")
 
 
-
-
     // Step 5: Precompute explanatory role distribution
     // Precompute distribution of explanatory roles for each tablerow that appears in the first 100 explanations.
     // 'qcerp' is a storage class that for each table row, stores the distribution of roles that row is observed in in explanations.
@@ -820,11 +817,6 @@ object ExplanationRegeneration {
     val qcRowProbGroup = QCRowProbGroup.mkQCRowProbGroup(filteredQuestionsTrain, tablestore, maxLevel = 8)
 
     // Enabled features
-    //val enabledFeatures = Set("TFIDF", "QC_SINGLE")
-    //val enabledFeatures = Set("TFIDF", "QC_SINGLE_L5")
-
-    //val enabledFeatures = Set("TFIDF", "QC")
-    //val enabledFeatures = Set("TFIDF")
 
     // Retrieve a list of enabled features from the properties file
     val enabledFeatures = props.getProperty("enabledFeatures").toUpperCase().split(",").map(_.trim).toSet
