@@ -2,6 +2,7 @@
 Work in progress
 
 To run:
+Main entry point: explanationregeneration.ExplanationRegeneration
 
  Suggested memory arguments:
  -Xmx8g
