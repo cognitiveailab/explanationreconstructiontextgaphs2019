@@ -218,8 +218,9 @@ object ExplanationRegeneration {
     val queryVecQ = tfidfLTN( mkTermFreqQuestion(question, onlyContentTags = true), docFreq, tablestore )
     val queryVecA = tfidfLTN( mkTermFreqAnswerCandidate(question, answerCandidate, onlyContentTags = true), docFreq, tablestore )
 
-    // Compare with cosine similarity of each row vector
+    // For each possible tablestore row, generate cosine similarity values comparing the row text with the text of the question and answer
     for (rowEval <- explRowPool.rowEvals) {
+      // Row vector
       val row = rowEval.row
       val rowVecLNN = tfidfLNN( mkTermFreqRow( row, onlyDataColumns = true) )
 
@@ -230,62 +231,17 @@ object ExplanationRegeneration {
       println ("rowVecLNN: " + rowVecLNN)
       */
 
+      // Compute cosine similarity between (question, row) and (answer, row)
       val cosQ = Counters.cosine(queryVecQ, rowVecLNN)
       val cosA = Counters.cosine(queryVecA, rowVecLNN)
 
+      // Add cosine similarity values as a feature for this row
       rowEval.features.setCount("COS_Q", cosQ)
       rowEval.features.setCount("COS_A", cosA)
-
-      //println( rowEval.evals )
-      //println ("")
     }
 
   }
 
-
-
-  def evaluateExplRowPoolQC(question:MCExplQuestion, answerCandidate:Int, tablestore:TableStore, explRowPool:ExplRowPool, qcRowModel:QCExplanationRowPredictor, extraLabelText:String = ""): Unit = {
-    val qcLabels = question.question.topic
-    val numLabels = qcLabels.length
-
-    // Step 1: Grab all the row scores for each of the QC labels for this question
-    val rowScores = new Array[Array[RowScore]](numLabels)
-    for (labelIdx <- 0 until numLabels) {
-      rowScores(labelIdx) = qcRowModel.queryCategory(qcLabels(labelIdx))
-    }
-
-    // For each row in the tablestore
-    for (rowEval <- explRowPool.rowEvals) {
-      val row = rowEval.row
-
-      // For each QC label for this question
-      for (labelIdx <- 0 until numLabels) {
-
-        breakable {
-          // Grab the list of QC-related scores for each row
-          val rowScores_ = rowScores(labelIdx)
-
-          // Search for the row in the QC scores
-          for (i <- 0 until rowScores_.length) {
-            val rowDist = rowScores_(i).rowDist
-            val scoreThisQC = rowScores_(i).score
-
-            // Once the row is found
-            if (rowDist.row == row) {
-              // Record the score
-              val currentScore = rowEval.features.getCount("QC" + extraLabelText)
-              val newScore = math.max(currentScore, scoreThisQC)
-              rowEval.features.setCount("QC" + extraLabelText, newScore)
-              //println("FOUND: " + rowEval.evals )
-              break()     // We found the row evaluation in the rowScores array -- so we don't need to keep iterating through the rest of the array -- break.
-            }
-          }
-        }
-      }
-    }
-
-
-  }
 
 
   /*
@@ -313,59 +269,25 @@ object ExplanationRegeneration {
   /*
    * Classifier: Ranking classifier mechanics (feature generation)
    */
-  def populateFeatures(question:MCExplQuestion, enabledFeatures:Set[String], tablestore:TableStore, qcRowProbGroup:QCRowProbGroup):ExplRowPool = {
+  def populateFeatures(question:MCExplQuestion, enabledFeatures:Set[String], tablestore:TableStore):ExplRowPool = {
     val features = new Counter[String]
     val correctIdx = question.question.correctAnswer
 
-    // Generate a blank "explanation pool" -- a list of tablestore sentences that we can rank
+    // Step 1: Generate a blank "explanation pool" -- a list of tablestore sentences that we can rank
     val explPool = mkBlankExplRowPool(question, correctIdx, tablestore)
     if (correctIdx < 0) return explPool     // Special case checking: If the question is invalid for whatever reason, return a blank pool.
 
-    // Feature generation: perform explanation row evaluation through various means for ranking
+    // Step 2: Feature generation: perform explanation row evaluation through various means for ranking
     if (enabledFeatures.contains("TFIDF")) {
       evaluateExplRowPoolTFIDF(question, correctIdx, tablestore, explPool)
     }
 
-    if (enabledFeatures.contains("QC")) {
-      for (level <- 0 until qcRowProbGroup.maxLevel) {
-        evaluateExplRowPoolQC(question, correctIdx, tablestore, explPool, qcRowProbGroup.getAtLevel(level), "_L" + level)
-      }
+    if (enabledFeatures.contains("NEWFEATURE1")) {
+      //evalNewFeature1(question, correctIdx, tablestore, explPool)
     }
 
-    if (enabledFeatures.contains("QC_SINGLE")) {
-      evaluateExplRowPoolQC(question, correctIdx, tablestore, explPool, qcRowProbGroup.getAtLevel(0), "_L0")
-    }
-
-    if (enabledFeatures.contains("QC_SINGLE_L1")) {
-      evaluateExplRowPoolQC(question, correctIdx, tablestore, explPool, qcRowProbGroup.getAtLevel(1), "_L1")
-    }
-
-    if (enabledFeatures.contains("QC_SINGLE_L2")) {
-      evaluateExplRowPoolQC(question, correctIdx, tablestore, explPool, qcRowProbGroup.getAtLevel(2), "_L2")
-    }
-
-    if (enabledFeatures.contains("QC_SINGLE_L3")) {
-      evaluateExplRowPoolQC(question, correctIdx, tablestore, explPool, qcRowProbGroup.getAtLevel(3), "_L3")
-    }
-
-    if (enabledFeatures.contains("QC_SINGLE_L4")) {
-      evaluateExplRowPoolQC(question, correctIdx, tablestore, explPool, qcRowProbGroup.getAtLevel(4), "_L4")
-    }
-
-    if (enabledFeatures.contains("QC_SINGLE_L5")) {
-      evaluateExplRowPoolQC(question, correctIdx, tablestore, explPool, qcRowProbGroup.getAtLevel(5), "_L5")
-    }
-
-    if (enabledFeatures.contains("QC_SINGLE_L6")) {
-      evaluateExplRowPoolQC(question, correctIdx, tablestore, explPool, qcRowProbGroup.getAtLevel(6), "_L6")
-    }
-
-    if (enabledFeatures.contains("QC_SINGLE_L7")) {
-      evaluateExplRowPoolQC(question, correctIdx, tablestore, explPool, qcRowProbGroup.getAtLevel(7), "_L7")
-    }
-
-    if (enabledFeatures.contains("QC_SINGLE_L8")) {
-      evaluateExplRowPoolQC(question, correctIdx, tablestore, explPool, qcRowProbGroup.getAtLevel(8), "_L8")
+    if (enabledFeatures.contains("NEWFEATURE2")) {
+      //evalNewFeature1(question, correctIdx, tablestore, explPool)
     }
 
     // Return
@@ -373,7 +295,7 @@ object ExplanationRegeneration {
   }
 
 
-  def mkDataset(questions:Array[MCExplQuestion], enabledFeatures:Set[String], tablestore:TableStore, qcRowProbGroup:Option[QCRowProbGroup], relabelZeroFeaturePositives:Boolean):(RVFRankingDataset[String], Array[ExplRowPool]) = {
+  def mkDataset(questions:Array[MCExplQuestion], enabledFeatures:Set[String], tablestore:TableStore, relabelZeroFeaturePositives:Boolean):(RVFRankingDataset[String], Array[ExplRowPool]) = {
     val dataset = new RVFRankingDataset[String]
     val explPools = new Array[ExplRowPool](questions.length)
 
@@ -387,52 +309,13 @@ object ExplanationRegeneration {
 
 
       // Step 1: Generate and populate features
-      var explRowPool:ExplRowPool = null
-
-      var qcEnabled:Boolean = false
-      for (featureName <- enabledFeatures) {
-        if (featureName.startsWith("QC")) qcEnabled = true
-      }
-
-      if (qcEnabled == false) {
-        val blankGroup = new QCRowProbGroup(tablestore, 1)        // Create faux blank group (not used)
-        explRowPool = populateFeatures(question, enabledFeatures, tablestore, blankGroup)
-
-      } else {
-        // Handle QC Caching (for speed)
-        if (qcRowProbGroup.isDefined) {
-          // Evaluation: The pool is static for each question, and externally supplied.
-          explRowPool = populateFeatures(question, enabledFeatures, tablestore, qcRowProbGroup.get)
-        } else {
-          // Training: The pool changes for each question, using leave-one-out crossvalidation to reduce overfitting.
-          // Either load a cached version of the pool, or generate a pool using leave-one-out crossvalidation if one can't be loaded.
-          val questionsSliced = questions.slice(0, i) ++ questions.slice(i + 1, questions.size)
-          var qcRowProbGroup_LOOXV: QCRowProbGroup = null
-
-          // Check if we can load a pre-cached version of the pool, with this question left out
-          // TODO: Load the QC Cache path from properties file
-          val filenamePrefix = "/data/qccache/qs" + questions.length + "-qid" + question.question.questionID
-          if (QCRowProbGroup.canLoadFromFiles(filenamePrefix, tablestore, maxLevel = 8)) {
-            // A set of cached leave-one-out-crossvalidation pools exist, load them from file
-            println("Loading cached pool... (" + filenamePrefix + ")")
-            qcRowProbGroup_LOOXV = QCRowProbGroup.loadFromFiles(filenamePrefix, tablestore, maxLevel = 8)
-          } else {
-            // No cached pool found -- generate, and save
-            println("Generating pool... ")
-            qcRowProbGroup_LOOXV = QCRowProbGroup.mkQCRowProbGroup(questionsSliced, tablestore, maxLevel = 8)
-            println("Saving cached pool... (" + filenamePrefix + ")")
-            qcRowProbGroup_LOOXV.saveToFiles(filenamePrefix)
-          }
-
-          explRowPool = populateFeatures(question, enabledFeatures, tablestore, qcRowProbGroup_LOOXV)
-        }
-      }
-
+      var explRowPool:ExplRowPool = populateFeatures(question, enabledFeatures, tablestore)
       explPools(i) = explRowPool
-      // Step 2: extract parallel (label, feature) arrays
+
+      // Step 2: Extract parallel (label, feature) arrays
       val (labels, features) = explRowPool.mkLabelFeaturePairs(relabelZeroFeaturePositives)
 
-      // Step 3: Convert to datums
+      // Step 3: Convert to 'datums' to use built-in ML frameworks in Processors
       val queryDatums = new ListBuffer[Datum[Int, String]]
       for (j <- 0 until labels.length) {
         val datum = new RVFDatum[Int, String](labels(j), features(j))
@@ -454,9 +337,9 @@ object ExplanationRegeneration {
    * Classifier: Ranking classifier mechanics (train/evaluation functions)
    */
 
-  def train(classifier:RankingClassifier[String], questions:Array[MCExplQuestion], enabledFeatures:Set[String], tablestore:TableStore, qcRowProbGroup:QCRowProbGroup): Unit = {
+  def train(classifier:RankingClassifier[String], questions:Array[MCExplQuestion], enabledFeatures:Set[String], tablestore:TableStore): Unit = {
     // Step 1: make dataset
-    val (dataset, _) = mkDataset(questions, enabledFeatures, tablestore, None, relabelZeroFeaturePositives = true)
+    val (dataset, _) = mkDataset(questions, enabledFeatures, tablestore, relabelZeroFeaturePositives = true)
 
     // Step 2: Train classifier
     logger.info("Training... ")
@@ -472,13 +355,13 @@ object ExplanationRegeneration {
   }
 
 
-  def evaluate(classifier:RankingClassifier[String], questions:Array[MCExplQuestion], enabledFeatures:Set[String], tablestore:TableStore, qcRowProbGroup:QCRowProbGroup): Unit = {
+  def evaluate(classifier:RankingClassifier[String], questions:Array[MCExplQuestion], enabledFeatures:Set[String], tablestore:TableStore): Unit = {
     val gamma:Double = 1.0
     var numSamples:Double = 0
     var sumScores = new Counter[String]
 
-    // Step 1: make dataset
-    val (dataset, explRowPools) = mkDataset(questions, enabledFeatures, tablestore, Some(qcRowProbGroup), relabelZeroFeaturePositives = false)
+    // Step 1: Make dataset
+    val (dataset, explRowPools) = mkDataset(questions, enabledFeatures, tablestore, relabelZeroFeaturePositives = false)
 
     // Step 2: Generate predictions
     for (i <- 0 until dataset.size) {
@@ -487,7 +370,7 @@ object ExplanationRegeneration {
 
       // Generate scores for each row
       val rowScores = classifier.scoresOf(queryDatums).toArray
-      println( "Length of scores: " + rowScores.length)
+      //println( "Length of scores: " + rowScores.length)
 
       // Populate these externally-generated row scores into the row evaluation storage class
       explRowPools(i).populateExternalScores(rowScores)
@@ -540,8 +423,12 @@ object ExplanationRegeneration {
 
     println( avgScores.sorted(descending = true) )
 
-
     // Step 2: Display scores in string
+    os.append("-------------------------------------------------\n")
+    os.append(" Performance on Evaluation Set\n")
+    os.append("-------------------------------------------------\n")
+    os.append("\n")
+
     os.append("MAP: " + avgScores.getCount(SCORE_MAP).formatted("%3.4f") + "\n")
     os.append("\n")
     os.append("MAP_ROLE_CENTRAL:    " + avgScores.getCount(SCORE_MAP_CENTRAL).formatted("%3.4f") + "\n")
@@ -788,28 +675,12 @@ object ExplanationRegeneration {
     println ("\n\n")
 
 
-    // Step 5: Precompute explanatory role distribution
-    // Precompute distribution of explanatory roles for each tablerow that appears in the first 100 explanations.
-    // 'qcerp' is a storage class that for each table row, stores the distribution of roles that row is observed in in explanations.
-    // For example:
-    // QCRowDist: metal is a kind of material (KINDOF, UID: 95c4-ec5e-bce9-afd8)
-    //   roleDist: GROUNDING:4.000  CENTRAL:1.000
-
-    println ("* calling QCExplanationRowPredictor:")
-    val qcerp = QCExplanationRowPredictor.mkQCExplanationRowPredictor( filteredQuestionsTrain, tablestore, heirLevel = -1)
-    println ("Explanatory Role Distribution (debug):")
-    qcerp.display(maxDisplay = 20)
-
-    // Generate QCExplanationRowPredictor distribution across all levels of the heirarchy
-    val qcRowProbGroup = QCRowProbGroup.mkQCRowProbGroup(filteredQuestionsTrain, tablestore, maxLevel = 8)
-
-    // Enabled features
-
+    // Step 5: Enabled features
     // Retrieve a list of enabled features from the properties file
     val enabledFeatures = props.getProperty("enabledFeatures").toUpperCase().split(",").map(_.trim).toSet
 
 
-    // Generate classifier
+    // Step 6: Generate classifier
     // SVM Ranking classifier download: https://www.cs.cornell.edu/people/tj/svm_light/svm_rank.html
     // Must be placed in an area on the PATH environment variable to be executed by Processors.
 
@@ -824,32 +695,21 @@ object ExplanationRegeneration {
     val classifier = new SVMRankingClassifier[String](classifierProperties)
 
 
-    /*
-    // Perceptron
-    val classifierProperties = new Properties()
-    classifierProperties.setProperty("classifierClass", "PerceptronRankingClassifier")
-    classifierProperties.setProperty("epochs", "10")
-    classifierProperties.setProperty("burnInIterations", "5")
-    val classifier = new PerceptronRankingClassifier[String](classifierProperties)
-    */
+    // Step 7: Train classifier
+    train(classifier, filteredQuestionsTrain, enabledFeatures, tablestore)
 
-    /*
-    classifierProperties.setProperty("treesNumLeaves", "3")
-    classifierProperties.setProperty("trainFraction", "0.90")
-    val test = new JForestsRankingClassifier[String](classifierProperties)
-    */
-
-
-
-    // Train
-    train(classifier, filteredQuestionsTrain, enabledFeatures, tablestore, qcRowProbGroup)
-
-    // Evaluate
-    evaluate(classifier, filteredQuestionsEval, enabledFeatures, tablestore, qcRowProbGroup)
+    // Step 8: Evaluate classifier performance
+    evaluate(classifier, filteredQuestionsEval, enabledFeatures, tablestore)
     println ("EnabledFeatures: " + enabledFeatures.toList.sorted.mkString(", "))
 
-    // Print model feature weights
-    println ("Model: " + classifier.displayModel(new PrintWriter(System.out, true)))
+
+    // Step 2: (Optional) Display model weights
+    println("-------------------------------------------------\n")
+    println(" Model Weights\n")
+    println("-------------------------------------------------\n")
+    println("\n")
+
+    classifier.displayModel(new PrintWriter(System.out, true))
 
   }
 
