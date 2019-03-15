@@ -148,14 +148,10 @@ class ExplRowPool(question:MCExplQuestion, answerCandidate:Int, tablestore:Table
 
     var numCorrect:Double = 0
     for (i <- 0 until n+1) {
-      println ("Iterations: " + i)
       if (ranks.contains(i)) {
         numCorrect += 1
       }
     }
-
-    println("numCorrect: " + numCorrect + " + (n = " + n + ")")
-
 
     var score:Double = 0.0
     // Case 1: The gold explanation has more than N rows
@@ -166,7 +162,6 @@ class ExplRowPool(question:MCExplQuestion, answerCandidate:Int, tablestore:Table
       // perfect score, even if all rows were present.
       score = (numCorrect / question.expl.size.toDouble)
     }
-    println ("score@" + n + ": " + score)
 
     return score
   }
