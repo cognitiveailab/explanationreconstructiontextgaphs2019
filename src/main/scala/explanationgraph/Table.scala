@@ -144,7 +144,7 @@ class Table(filename:String, val tablestore:TableStore, twoLineHeader:Boolean = 
       }
 
       // Add row to table
-      val rowUID = fields(UIDColIdx)
+      val rowUID = fields(UIDColIdx).toLowerCase
       if ((rowUID.length > 0) && (hasContent == true)) {
         //rows.append( new TableRow(this, lexicon, fields) ) // Add row
         rows.append( TableRow.mkTableRow(this, fields) ) // Add row

@@ -489,7 +489,7 @@ class ExplRowPool(question:MCExplQuestion, answerCandidate:Int, tablestore:Table
       for (row <- toFind) {
         missingUIDs.append(row.uid)
       }
-      println ("* WARNING: averagePrecision: toFind length is greater than zero (" + toFind.length +"). This likely indicates that a UID was not found. Ranks for this set will be incorrect. (UIDs = " + missingUIDs.mkString(", ") + ")" )
+      println ("* WARNING: averagePrecision: toFind length is greater than zero (" + toFind.length +"). This likely indicates that a UID was not found. Ranks for this set will be incorrect. (Missing UIDs = " + missingUIDs.mkString(", ") + ")" )
       for (i <- 0 until toFind.length) {
         ranks.append(-1)
       }

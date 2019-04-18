@@ -191,7 +191,7 @@ class TableRow(val table:Table, val cells:Array[String],
 
   private def getUID():String = {
     if (uidColumnIdx >= 0) {
-      return cells(uidColumnIdx)
+      return cells(uidColumnIdx).toLowerCase
     } else {
       return TableRow.DEFAULT_ROW_UUID
     }
