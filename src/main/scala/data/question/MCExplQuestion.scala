@@ -1,5 +1,7 @@
 package data.question
 
+import explanationgraph.{TableRow, TableStore}
+
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.Breaks._
 
@@ -14,6 +16,19 @@ class MCExplQuestion(val question:MCQuestion) {
    * Constructor
    */
   parseExplanationString( question.explanation )
+
+
+  // Return a list of table rows from the tablestore
+  def getTableRows(tablestore:TableStore):Array[TableRow] = {
+    val out = new ArrayBuffer[TableRow]
+
+    for (explRow <- expl) {
+      out.append( tablestore.getRowByUID(explRow.uid) )
+    }
+
+    // Return
+    out.toArray
+  }
 
 
   /*

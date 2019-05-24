@@ -383,6 +383,12 @@ object ExplanationRegeneration {
       val scores = explRowPools(i).getScores()
       println ("Scores: " + scores)
 
+      // Debug printout
+      println ("----------------------------------------------")
+      println (questions(i).toString())
+      println (explRowPools(i).toString())
+      println ("----------------------------------------------")
+
       // Check for errors/infinities in the scores
       breakable {
         // Check for errors/infinities
@@ -396,6 +402,7 @@ object ExplanationRegeneration {
         sumScores += scores
         numSamples += 1
       }
+
     }
 
     // Report scores
