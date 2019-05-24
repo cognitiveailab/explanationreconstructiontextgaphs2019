@@ -363,6 +363,8 @@ object ExplanationRegeneration {
     // Step 1: Make dataset
     val (dataset, explRowPools) = mkDataset(questions, enabledFeatures, tablestore, relabelZeroFeaturePositives = false)
 
+    val errorsEncountered = new ArrayBuffer[Int]
+
     // Step 2: Generate predictions
     for (i <- 0 until dataset.size) {
       // Generate model features for test question
@@ -395,7 +397,11 @@ object ExplanationRegeneration {
         for (key <- scores.keySet) {
           val value = scores.getCount(key)
           if ((value == Double.NaN) || (value == Double.PositiveInfinity) || (value == Double.NegativeInfinity)) {
-            break()   // Found -- exit, without recording scores
+            scores.setCount(key, 0.0)
+            //break()   // Found -- exit, without recording scores
+
+            println ("ERROR/INFINITY/NAN!")
+            errorsEncountered.append(i)
           }
         }
         // Not found -- record scores
@@ -410,6 +416,9 @@ object ExplanationRegeneration {
 
     println ("Summary:   (n = " + numSamples + ")")
     println (summaryAverageScores(sumScores, numSamples))
+
+    println ("")
+    println ("Errors encounterd with nan/invalid scores: " + errorsEncountered.length + " (" + errorsEncountered.mkString(", ") + ")")
 
   }
 

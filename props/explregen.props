@@ -5,12 +5,12 @@
 # Input: Questions, Explanation Annotation, and Tablestore
 #
 
-questionsTrain = questions/ARC-Elementary-QC+EXPL-Train.tsv
-questionsEval = questions/ARC-Elementary-QC+EXPL-Dev.tsv
+questionsTrain = questions/ARC-Elementary+EXPL-Train.tsv
+questionsEval = questions/ARC-Elementary+EXPL-Dev.tsv
 tablestoreIndex = annotation/expl-tablestore-export-2017-08-25-230344/tableindex.txt
 
 # If enabled, artificially limit to a small number of questions for debugging
-debug.limitNumQuestions = 50
+#debug.limitNumQuestions = 50
 
 
 #
