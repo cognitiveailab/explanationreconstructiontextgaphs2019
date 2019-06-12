@@ -1,14 +1,14 @@
 package explanationregeneration
 
-import java.io.PrintWriter
-import java.util.Properties
+import java.io.{File, PrintWriter}
+import java.util.{Locale, Properties}
 
 import data.question.{ExamQuestionParserDynamic, MCExplQuestion, MCQuestion}
+import edu.arizona.sista.learning._
 import edu.arizona.sista.struct.{Counter, Counters}
 import edu.arizona.sista.utils.StringUtils
 import explanationgraph.{TableRow, TableStore}
-import ExplRowPool._
-import edu.arizona.sista.learning._
+import explanationregeneration.ExplRowPool._
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -355,7 +355,7 @@ object ExplanationRegeneration {
   }
 
 
-  def evaluate(classifier:RankingClassifier[String], questions:Array[MCExplQuestion], enabledFeatures:Set[String], tablestore:TableStore): Unit = {
+  def evaluate(classifier:RankingClassifier[String], questions:Array[MCExplQuestion], enabledFeatures:Set[String], tablestore:TableStore): Array[ExplRowPool] = {
     val gamma:Double = 1.0
     var numSamples:Double = 0
     var sumScores = new Counter[String]
@@ -420,9 +420,22 @@ object ExplanationRegeneration {
     println ("")
     println ("Errors encounterd with nan/invalid scores: " + errorsEncountered.length + " (" + errorsEncountered.mkString(", ") + ")")
 
+    explRowPools
   }
 
 
+  /*
+   * Write predictions to a file
+   *
+   * The format is questionID<TAB>explanationID without header; the order is important
+   */
+  def write(explRowPools: Array[ExplRowPool], writer: PrintWriter): Unit = {
+    explRowPools.foreach { explRowPool =>
+      explRowPool.rowEvals.foreach { rowEval =>
+        writer.format(Locale.ROOT, "%s\t%s%n", explRowPool.question.question.questionID, rowEval.row.uid)
+      }
+    }
+  }
 
   /*
    * Score reporting
@@ -715,9 +728,21 @@ object ExplanationRegeneration {
     train(classifier, filteredQuestionsTrain, enabledFeatures, tablestore)
 
     // Step 8: Evaluate classifier performance
-    evaluate(classifier, filteredQuestionsEval, enabledFeatures, tablestore)
+    val explRowPools = evaluate(classifier, filteredQuestionsEval, enabledFeatures, tablestore)
     println ("EnabledFeatures: " + enabledFeatures.toList.sorted.mkString(", "))
 
+    // Step 9: (Optional) Write predictions to a file
+    if (props.containsKey("predictOutput")) {
+      val file = new File(props.getProperty("predictOutput"))
+      println("Writing predictions to " + file.getAbsolutePath)
+
+      val writer = new PrintWriter(file)
+      write(explRowPools, writer)
+
+      writer.close()
+    } else {
+      println("Not writing predictions to a file. Set the predictOutput property, if needed.")
+    }
 
     // Step 2: (Optional) Display model weights
     println("-------------------------------------------------\n")

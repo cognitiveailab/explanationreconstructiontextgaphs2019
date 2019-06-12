@@ -23,7 +23,7 @@ import scala.collection.mutable
   *
   * Created by peter on 3/16/18.
   */
-class ExplRowPool(question:MCExplQuestion, answerCandidate:Int, tablestore:TableStore) {
+class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:TableStore) {
   var rowEvals = new ArrayBuffer[RowEval]
 
   // Add a tablestore row to this pool, with a blank rowEval

@@ -26,3 +26,7 @@ ranker.svm_c = 1.0
 
 
 
+#
+# Output for the TextGraphs 2019 Shared Task
+#
+predictOutput = predict.txt
