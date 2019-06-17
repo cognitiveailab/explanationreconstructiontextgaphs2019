@@ -7,7 +7,7 @@ For more information, please see [https://github.com/umanlp/tg2019task](https://
 ## Data
 The data for this shared task is available at: 
 
-[http://cognitiveai.org/dist/worldtree_corpus_textgraphs2019sharedtask_withgraphvis.zip](http://cognitiveai.org/dist/worldtree_corpus_textgraphs2019sharedtask_withgraphvis.zip).
+[http://cognitiveai.org/dist/worldtree_corpus_textgraphs2019sharedtask_withgraphvis.zip](http://cognitiveai.org/dist/worldtree_corpus_textgraphs2019sharedtask_withgraphvis.zip)
 
 This should be unzipped in the main path of this repository (if it is placed in a different location, please point to this new location in the explregen.props file). Please note that this distribution is still subject to the terms set forth in the included license `EULA AI2 Mercury Dataset 01012018.docx`.
 
