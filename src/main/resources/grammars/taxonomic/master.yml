@@ -1,0 +1,31 @@
+taxonomy:
+  - Entity:
+    - Noun
+    - Adjective
+    - NounPhrase
+    - NounPhrasePossessive
+  - Patterns:
+    - IsAPattern
+    - IsAPatternDictionary
+    - PartOfPattern
+    - PartOfPatternDictionary
+  - Location
+  - Event:
+    - IsA
+    - IsADict
+    - PartOf
+    - PartOfDict
+
+
+rules:
+  - import: grammars/taxonomic/entities.yml
+    vars:
+      # We need our entities before we can match events
+      # Here we make use of the ${rulepriority} variable
+      # used in the entities.yml rules
+      rulepriority: "1"
+
+  - import: grammars/taxonomic/events.yml
+    vars:
+      rulepriority: "10"
+

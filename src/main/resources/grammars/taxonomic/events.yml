@@ -1,0 +1,60 @@
+#vars:
+#  kindoftrigger: "/kind of|type of/"
+#vars:
+#  isatrigger: [lemma=be] [lemma=a] [lemma=kind] [lemma=of] | [lemma=be] [lemma=a] [lemma=type] [lemma=of] | [lemma=be] [lemma=a]
+
+rules:
+  - name: generic1
+    label: Event
+    priority: ${rulepriority}
+    pattern: |
+      trigger = [tag=/^VB/]
+      agent: Noun = nsubj
+      #object: Noun = dobj | xcomp
+
+  - name: isa
+    label: IsA
+    priority: ${rulepriority}
+    type: token
+    pattern: |
+      @hypernym:NounPhrasePossessive @IsAPattern @hyponym:NounPhrasePossessive |
+      @hypernym:NounPhrasePossessive @IsAPattern @hyponym:NounPhrase (?![tag=POS]) |
+      (?<![tag=POS]) @hypernym:NounPhrase @IsAPattern @hyponym:NounPhrasePossessive |
+      (?<![tag=POS]) @hypernym:NounPhrase @IsAPattern @hyponym:NounPhrase (?![tag=POS])
+
+
+  - name: isadict
+    label: IsADict
+    priority: ${rulepriority}
+    type: token
+    pattern: |
+      ^@IsAPatternDictionary @hyponym:NounPhrasePossessive |
+      ^@IsAPatternDictionary @hyponym:NounPhrase (?![tag=POS])
+
+
+  - name: partof
+    label: PartOf
+    priority: ${rulepriority}
+    type: token
+    pattern: |
+      @holonym:NounPhrasePossessive @PartOfPattern @meronym:NounPhrasePossessive |
+      @holonym:NounPhrasePossessive @PartOfPattern @meronym:NounPhrase (?![tag=POS]) |
+      (?<![tag=POS]) @holonym:NounPhrase @PartOfPattern @meronym:NounPhrasePossessive |
+      (?<![tag=POS]) @holonym:NounPhrase @PartOfPattern @meronym:NounPhrase (?![tag=POS])
+
+
+
+  - name: partofdict
+    label: PartOfDict
+    priority: ${rulepriority}
+    type: token
+    pattern: |
+      ^@PartOfPatternDictionary @meronym:NounPhrasePossessive |
+      ^@PartOfPatternDictionary @meronym:NounPhrase (?![tag=POS])
+
+#      trigger = IsAPattern
+#      entity: Noun = nsubj
+
+#      [tag=PRP|tag=DT]? [tag=/^JJ/]* @a:Noun @pat:IsAPattern [tag=/^JJ/]* @b:Noun [!lemma=of]
+
+

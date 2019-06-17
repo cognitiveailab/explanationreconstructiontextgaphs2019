@@ -1,0 +1,63 @@
+taxonomy:
+  - Entity:
+    - Noun
+    - Adjective
+    - NounPhrase
+  - Patterns:
+    - KindOfPattern
+    - PartOfPattern
+  - Event:
+    - KindOf
+    - PartOf
+
+rules:
+  - name: n
+    label: Noun
+    priority: 1
+    type: token
+    unit: tag
+    pattern: |
+      /^NN/+
+
+  - name: adj
+    label: Adjective
+    priority: 1
+    type: token
+    unit: tag
+    pattern: |
+      /^JJ/+
+
+  - name: nounphrase
+    label: NounPhrase
+    priority: 2
+    type: token
+    pattern: |
+      (?<unused> [tag=/^(PRP|DT)$/])? @adj:Adjective? @noun:Noun
+
+  - name: kindofpattern
+    label: KindOfPattern
+    priority: 1
+    type: token
+    pattern: |
+      [lemma=be] [lemma=a]? @mod:Adjective? [lemma=kind] [lemma=of]
+
+  - name: partofpattern
+    label: PartOfPattern
+    priority: 1
+    type: token
+    pattern: |
+      [lemma=be] [lemma=a]? @mod:Adjective? [lemma=part] [lemma=of]
+
+  - name: isa
+    label: KindOf
+    priority: 4
+    type: token
+    pattern: |
+      @hypernym:NounPhrase @KindOfPattern @hyponym:NounPhrase
+
+  - name: partof
+    label: PartOf
+    priority: 4
+    type: token
+    pattern: |
+      @holonym:NounPhrase @PartOfPattern @meronym:NounPhrase
