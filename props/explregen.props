@@ -22,7 +22,7 @@ enabledFeatures = TFIDF
 #
 # SVM ranker parameters
 #
-ranker.svm_c = 1.0
+ranker.svm_c = 0.1
 
 
 
