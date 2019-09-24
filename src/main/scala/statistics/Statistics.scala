@@ -154,7 +154,6 @@ object Statistics {
 
 
       for (j <- 0 until expl.length) {
-        println (expl(j).role)
         if (expl(j).role == "CENTRAL") {
           countCentral += 1
           countCentralAcross += 1
