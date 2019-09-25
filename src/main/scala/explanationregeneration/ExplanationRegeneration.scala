@@ -420,6 +420,7 @@ object ExplanationRegeneration {
     println ("")
     println ("Errors encounterd with nan/invalid scores: " + errorsEncountered.length + " (" + errorsEncountered.mkString(", ") + ")")
 
+    // Return
     explRowPools
   }
 

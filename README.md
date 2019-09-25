@@ -75,4 +75,8 @@ weight: 14.72668 	 feature: COS_A  (idx:1)
 ```
 
 ## Prediction file for Codalab competition
-By default, this is output as predict.txt
+By default, the prediction file for the Codalab competition is output as predict.txt .
+
+To submit to Codalab, ZIP this predictions file and submit.  e.g.:
+
+> zip mysubmission.zip predict.txt
