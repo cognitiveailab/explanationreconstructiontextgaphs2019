@@ -4,8 +4,8 @@ import data.question.{ExamQuestionParserDynamic, ExplanationRow, MCExplQuestion}
 import edu.arizona.sista.struct.Counter
 import edu.arizona.sista.utils.StringUtils
 import explanationgraph.{LookupLemmatizer, TableKnowledgeCategories, TableRow, TableStore}
-import explanationregeneration.{ExplRowPool, RowEval}
-import explanationregeneration.ExplanationRegeneration.{contentTags, convertToExplQuestions, filterQuestionsByFlags}
+import explanationregeneration.{ExplRowPool, ExplanationRegeneration, RowEval}
+import explanationregeneration.ExplanationRegeneration.{contentTags, convertToExplQuestions, filterQuestionsByFlags, summaryAverageScores}
 import statistics.Statistics.{calculateExplanationLengthSummary, calculateExplanationRoleSummary, calculateTableUseSummary, printUsage}
 
 import scala.collection.mutable
@@ -159,6 +159,74 @@ object ManualEval {
     println("")
 
   }
+
+  /*
+   * Scores
+   */
+  def calculateScores(questions:Array[MCExplQuestion], tablestore:TableStore, model:Map[String, ArrayBuffer[String]], textDesc:String = ""): Unit = {
+    var numSamples:Double = 0
+    var sumScores = new Counter[String]
+    var sumSamples = new Counter[String]
+    val errorsEncountered = new ArrayBuffer[Int]
+
+    for (i <- 0 until questions.length) {
+      val question = questions(i)
+      val explRowPool = new ExplRowPool(question, question.question.correctAnswer, tablestore)
+
+      if (model.contains(question.question.questionID)) {
+        val rankings = model(question.question.questionID)
+        val scoresRanking = new ArrayBuffer[Double]
+        for (i <- 0 until rankings.length) {
+          explRowPool.addTablestoreRow( tablestore.getRowByUID(rankings(i)) )
+          scoresRanking.append( -i )
+        }
+
+        explRowPool.populateExternalScores( scoresRanking.toArray )
+
+        explRowPool.rank()
+
+        val scores = explRowPool.getScores()
+        val scoreCounts = new Counter[String]
+        //println ("Scores: " + scores)
+
+        // Check for errors/infinities in the scores
+        breakable {
+          // Check for errors/infinities
+          for (key <- scores.keySet) {
+              val value = scores.getCount(key)
+              if ((value == Double.NaN) || (value == Double.PositiveInfinity) || (value == Double.NegativeInfinity)) {
+                scores.setCount(key, 0.0)
+                //break()   // Found -- exit, without recording scores
+
+                println("ERROR/INFINITY/NAN!")
+                errorsEncountered.append(i)
+              } else {
+                scoreCounts.incrementCount(key)
+              }
+          }
+          // Not found -- record scores
+          sumScores += scores
+          sumSamples += scoreCounts
+          numSamples += 1
+        }
+      }
+
+    }
+
+    println ("Text Description: " + textDesc)
+    println ("Summary:   (n = " + numSamples + ")")
+    //println (summaryAverageScores(sumScores, numSamples))
+    println ( ExplanationRegeneration.summaryAverageScores2(sumScores, sumSamples) )
+
+    println ("")
+    println ("Errors encounterd with nan/invalid scores: " + errorsEncountered.length + " (" + errorsEncountered.mkString(", ") + ")")
+
+  }
+
+
+  /*
+   * Old
+   */
 
 
   // Performance by role overlap
@@ -603,6 +671,7 @@ object ManualEval {
     // Load model predictions
     val predictionsPath = "/home/peter/Downloads/tg2019-sharedtask-manualeval/"
     val predictionFilenames = Array("predict-tfidf.txt", "predict-jenlindadsouza.txt", "predict-pbannerj.txt", "predict-redkin.txt", "predict-ameyag416.txt")
+    //val predictionFilenames = Array("predict-tfidf.txt")
 
     val models = new ArrayBuffer[Map[String, ArrayBuffer[String]]]
     for (filename <- predictionFilenames) {
@@ -617,6 +686,7 @@ object ManualEval {
     }
     */
 
+/*
     val normalMAPs = Array.fill[Double](models.length)(0.0)
     var numSamples: Int = 0
     for (question <- filteredQuestionsEval) {
@@ -701,6 +771,16 @@ object ManualEval {
         println("\n\n")
       }
     }
+
+ */
+
+    for (i <- 0 until models.length) {
+      val model = models(i)
+      println ("Model: " + predictionFilenames(i))
+
+      calculateScores(filteredQuestionsEval, tablestore, model, predictionFilenames(i))
+    }
+
   }
 
 

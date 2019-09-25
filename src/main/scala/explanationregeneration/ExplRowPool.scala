@@ -133,7 +133,7 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
     }
     */
 
-    println (scores.toString())
+    // println (scores.toString())
     // Return
     scores
   }
@@ -214,7 +214,10 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
 
     // Step 4: Compute average precision
     val ranksRole = ranksOfCorrectRowsHelper(goldExplRowsInRole.toArray, rowEvalsNoOther.toArray)
-    val APRole = calculateAPFromRanks(ranksRole)
+    var APRole = calculateAPFromRanks(ranksRole)
+
+    // If the AP is zero, it means all elements from that role were removed -- set the score as NaN so we don't count this sample
+    if (APRole == 0.0) APRole == Double.NaN
 
     //println ("Ranks of correct rows (ROLE: " + role + ") (AP = " + APRole.formatted("%3.4f") + ") : " + ranksRole.mkString(", "))
 
@@ -347,10 +350,15 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
 
     // Step 4: Compute average precision
     val ranksLexOverlap = ranksOfCorrectRowsHelper(goldExplRowsLexOverlap.toArray, rowEvalsLexOverlap.toArray)
-    val APLexOverlap = calculateAPFromRanks(ranksLexOverlap)
+    var APLexOverlap = calculateAPFromRanks(ranksLexOverlap)
+    // If the AP is zero, it means all elements from that category were removed -- set the score as NaN so we don't count this sample
+    if (APLexOverlap == 0.0) APLexOverlap == Double.NaN
+
 
     val ranksNoOverlap = ranksOfCorrectRowsHelper(goldExplRowsNoOverlap.toArray, rowEvalsNoOverlap.toArray)
-    val APNoOverlap = calculateAPFromRanks(ranksNoOverlap)
+    var APNoOverlap = calculateAPFromRanks(ranksNoOverlap)
+    // If the AP is zero, it means all elements from that category were removed -- set the score as NaN so we don't count this sample
+    if (APNoOverlap == 0.0) APNoOverlap == Double.NaN
 
 
     //println ("Ranks of correct rows (lexical overlap subset) (AP = " + APLexOverlap.formatted("%3.4f") + ") : " + ranksLexOverlap.mkString(", "))

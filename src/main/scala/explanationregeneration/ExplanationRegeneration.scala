@@ -447,7 +447,8 @@ object ExplanationRegeneration {
     // Step 1: Average the scores
     val avgScores = new Counter[String]
     for (key <- sumScores.keySet) {
-      val average = sumScores.getCount(key) / numSamples
+      var average:Double = 0.0f
+      average = sumScores.getCount(key) / numSamples
       avgScores.setCount(key, average)
     }
 
@@ -485,7 +486,52 @@ object ExplanationRegeneration {
     os.toString()
   }
 
+  def summaryAverageScores2(sumScores:Counter[String], sampleCounts:Counter[String]):String = {
+    val os = new StringBuilder
 
+    // Step 1: Average the scores
+    val avgScores = new Counter[String]
+    for (key <- sumScores.keySet) {
+      var average:Double = 0.0f
+      val numSamples = sampleCounts.getCount(key)
+      average = sumScores.getCount(key) / numSamples
+      avgScores.setCount(key, average)
+    }
+
+    println( "avgScores: " + avgScores.sorted(descending = true) )
+    println ( "sampleCounts: " + sampleCounts.sorted(descending = true) )
+
+    // Step 2: Display scores in string
+    os.append("-------------------------------------------------\n")
+    os.append(" Performance on Evaluation Set\n")
+    os.append("-------------------------------------------------\n")
+    os.append("\n")
+
+    os.append("MAP: " + avgScores.getCount(SCORE_MAP).formatted("%3.4f") + "\n")
+    os.append("\n")
+    os.append("MAP_ROLE_CENTRAL:    " + avgScores.getCount(SCORE_MAP_CENTRAL).formatted("%3.4f") + "\n")
+    os.append("MAP_ROLE_GROUNDING:  " + avgScores.getCount(SCORE_MAP_GROUNDING).formatted("%3.4f") + "\n")
+    os.append("MAP_ROLE_LEXGLUE:    " + avgScores.getCount(SCORE_MAP_LEXGLUE).formatted("%3.4f") + "\n")
+    os.append("MAP_ROLE_BACKGROUND: " + avgScores.getCount(SCORE_MAP_BACKGROUND).formatted("%3.4f") + "\n")
+    os.append("\n")
+    os.append("MAP_LEXOVERLAP:      " + avgScores.getCount(SCORE_MAP_LEXOVERLAP).formatted("%3.4f") + "\n")
+    os.append("MAP_NOLEXOVERLAP:    " + avgScores.getCount(SCORE_MAP_NOLEXOVERLAP).formatted("%3.4f") + "\n")
+    os.append("\n")
+    os.append("MAP_TABKT_RET:       " + avgScores.getCount(SCORE_MAP_TABKT_RET).formatted("%3.4f") + "\n")
+    os.append("MAP_TABKT_RET/LEX:   " + avgScores.getCount(SCORE_MAP_TABKT_RETLEX).formatted("%3.4f") + "\n")
+    os.append("MAP_TABKT_INFSUPP:   " + avgScores.getCount(SCORE_MAP_TABKT_INFSUPP).formatted("%3.4f") + "\n")
+    os.append("MAP_TABKT_COMPLEX:   " + avgScores.getCount(SCORE_MAP_TABKT_COMPLEX).formatted("%3.4f") + "\n")
+    os.append("\n")
+    os.append("Precision@1          " + avgScores.getCount(SCORE_PRECISIONAT1).formatted("%3.4f") + "\n")
+    os.append("Precision@2          " + avgScores.getCount(SCORE_PRECISIONAT2).formatted("%3.4f") + "\n")
+    os.append("Precision@3          " + avgScores.getCount(SCORE_PRECISIONAT3).formatted("%3.4f") + "\n")
+    os.append("Precision@4          " + avgScores.getCount(SCORE_PRECISIONAT4).formatted("%3.4f") + "\n")
+    os.append("Precision@5          " + avgScores.getCount(SCORE_PRECISIONAT5).formatted("%3.4f") + "\n")
+    os.append("\n")
+
+    // Return
+    os.toString()
+  }
 
 
 
