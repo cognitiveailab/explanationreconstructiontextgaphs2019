@@ -10,7 +10,7 @@ questionsEval = questions/ARC-Elementary+EXPL-Test.tsv
 tablestoreIndex = annotation/expl-tablestore-export-2017-08-25-230344/tableindex.txt
 
 # If enabled, artificially limit to a small number of questions for debugging
-debug.limitNumQuestions = 50
+#debug.limitNumQuestions = 50
 
 
 #
