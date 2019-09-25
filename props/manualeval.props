@@ -1,0 +1,32 @@
+# TextGraphs 2019 Shared Task on Explanation Regeneration for Science Question Answering
+
+
+#
+# Input: Questions, Explanation Annotation, and Tablestore
+#
+
+#questionsTrain = questions/ARC-Elementary+EXPL-Train.tsv
+questionsEval = questions/ARC-Elementary+EXPL-Test.tsv
+tablestoreIndex = annotation/expl-tablestore-export-2017-08-25-230344/tableindex.txt
+
+# If enabled, artificially limit to a small number of questions for debugging
+debug.limitNumQuestions = 50
+
+
+#
+# Enabled features (comma separated)
+# e.g. TFIDF,NEWFEATURE1,NEWFEATURE2
+#
+enabledFeatures = TFIDF
+
+#
+# SVM ranker parameters
+#
+ranker.svm_c = 0.1
+
+
+
+#
+# Output for the TextGraphs 2019 Shared Task
+#
+predictOutput = predict.txt
