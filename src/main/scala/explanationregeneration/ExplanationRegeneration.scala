@@ -527,6 +527,8 @@ object ExplanationRegeneration {
     os.append("Precision@3          " + avgScores.getCount(SCORE_PRECISIONAT3).formatted("%3.4f") + "\n")
     os.append("Precision@4          " + avgScores.getCount(SCORE_PRECISIONAT4).formatted("%3.4f") + "\n")
     os.append("Precision@5          " + avgScores.getCount(SCORE_PRECISIONAT5).formatted("%3.4f") + "\n")
+    os.append("Precision@10         " + avgScores.getCount(SCORE_PRECISIONAT10).formatted("%3.4f") + "\n")
+    os.append("Precision@20         " + avgScores.getCount(SCORE_PRECISIONAT20).formatted("%3.4f") + "\n")
     os.append("\n")
 
     // Return

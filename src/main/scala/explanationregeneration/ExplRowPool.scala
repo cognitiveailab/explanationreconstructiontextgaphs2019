@@ -108,7 +108,7 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
     scores.setCount(SCORE_MAP_BACKGROUND, averagePrecisionBackground())
 
     // Average precision by lexical overlap
-    val (mapLexOverlap, mapNoOverlap) = averagePrecisionByLexicalOverlap()
+    val (mapLexOverlap, mapNoOverlap) = averagePrecisionByLexicalOverlap(onlyContentTags = false)
     scores.setCount(SCORE_MAP_LEXOVERLAP, mapLexOverlap)
     scores.setCount(SCORE_MAP_NOLEXOVERLAP, mapNoOverlap)
 
@@ -122,6 +122,8 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
     scores.setCount(SCORE_PRECISIONAT3, precisionAtN(3))
     scores.setCount(SCORE_PRECISIONAT4, precisionAtN(4))
     scores.setCount(SCORE_PRECISIONAT5, precisionAtN(5))
+    scores.setCount(SCORE_PRECISIONAT10, precisionAtN(10))
+    scores.setCount(SCORE_PRECISIONAT20, precisionAtN(20))
 
     /*
     // Set single-count counter keys, so that the counter can be added and averaged easily later on
@@ -153,6 +155,8 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
       }
     }
 
+    /*
+    // Explanation-centered definition (maxes out at the explanation length):
     var score:Double = 0.0
     // Case 1: The gold explanation has more than N rows
     if (question.expl.size > n) {
@@ -162,6 +166,10 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
       // perfect score, even if all rows were present.
       score = (numCorrect / question.expl.size.toDouble)
     }
+    */
+
+    // Normal definition
+    val score = numCorrect / n.toDouble
 
     return score
   }
@@ -566,6 +574,9 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
     for (n <- 1 to 5) {
       os.append(" Precision@" + n + ": " + precisionAtN(n).formatted("%3.3f") + "\n")
     }
+    os.append(" Precision@" + 10 + ": " + precisionAtN(10).formatted("%3.3f") + "\n")
+    os.append(" Precision@" + 20 + ": " + precisionAtN(20).formatted("%3.3f") + "\n")
+
 
 
     // Return
@@ -672,5 +683,7 @@ object ExplRowPool {
   val SCORE_PRECISIONAT3        = "PRECISION_AT_3"
   val SCORE_PRECISIONAT4        = "PRECISION_AT_4"
   val SCORE_PRECISIONAT5        = "PRECISION_AT_5"
+  val SCORE_PRECISIONAT10        = "PRECISION_AT_10"
+  val SCORE_PRECISIONAT20        = "PRECISION_AT_20"
 
 }

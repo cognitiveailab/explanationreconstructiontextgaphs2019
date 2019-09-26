@@ -185,6 +185,12 @@ object ManualEval {
 
         explRowPool.rank()
 
+        /*
+        println ("ExplRowPool: ")
+        println (explRowPool.toString())
+        println ("")
+        */
+
         val scores = explRowPool.getScores()
         val scoreCounts = new Counter[String]
         //println ("Scores: " + scores)
