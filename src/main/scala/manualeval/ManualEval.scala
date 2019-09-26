@@ -160,6 +160,150 @@ object ManualEval {
 
   }
 
+
+  def displayModelPredictionsSummaryTSV(explQuestion: MCExplQuestion, tablestore: TableStore, models: Array[Map[String, ArrayBuffer[String]]]): Unit = {
+    val delim = "\t"
+    val question = explQuestion.question
+    val expl = explQuestion.expl
+
+    println("Question: " + question.text)
+    for (i <- 0 until question.choices.length) {
+      if (question.correctAnswer == i) {
+        println("(" + i + ") * " + question.choices(i))
+      } else {
+        println("(" + i + ") " + question.choices(i))
+      }
+    }
+
+    println ("QID" + delim + question.questionID)
+
+    val rows = mutable.Set[(Int, TableRow)]()
+    var notFound:Boolean = false
+
+    for (j <- 0 until 20) {
+      for (i <- 0 until models.length) {
+        //println("Model " + i + " Rankings: ")
+
+        val model = models(i)
+        if (model.contains(question.questionID)) {
+          val rankings = model(question.questionID)
+
+          var isGold:Int = 0
+          breakable {
+            for (a <- 0 until expl.length) {
+              if (expl(a).uid.toLowerCase == rankings(j)) {
+                isGold = 1
+                break()
+              }
+            }
+          }
+
+          //strOut.append(tablestore.getRowByUID(rankings(j)).toStringSentWithUID("") + delim)
+          rows.add( (isGold, tablestore.getRowByUID(rankings(j))) )
+
+        } else {
+          notFound = true
+        }
+      }
+    }
+
+    val sorted = rows.toArray.sortBy(-_._1)
+    for (elem <- sorted) {
+      println ("manual" + delim + elem._1 + delim + elem._2.uid + delim + elem._2.toStringSentWithUID())
+    }
+
+    if (notFound) println ("hadnotfound")
+
+    println("")
+  }
+
+  def loadManualRatingsTSV(filename: String): Map[String, mutable.Map[String, Int]] = {
+    val out = mutable.Map[String, mutable.Map[String, Int]]()
+    var numRatingsLoaded:Int = 0
+
+    println(" * Loading manual ratings: " + filename)
+    var curQID:String = ""
+
+    for (line <- io.Source.fromFile(filename, "UTF-8").getLines()) {
+      val fields = line.split("\t")
+      if (fields.length > 0) {
+        if (fields(0).startsWith("QID")) {
+          curQID = fields(1).trim
+        } else if (fields(0).startsWith("manual")) {
+          val uuid = fields(3).trim()
+          val manualRating = fields(2).trim()
+
+          if (manualRating.length > 0) {
+            if (!out.contains(curQID)) {
+              // If the key hasn't been used before, add a blank array
+              out(curQID) = mutable.Map[String, Int]()
+            }
+            val UUIDtoRatingLUT = out(curQID)
+            UUIDtoRatingLUT(uuid) = manualRating.toInt
+            out(curQID) = UUIDtoRatingLUT
+
+            if (manualRating.toInt != 1) {
+              numRatingsLoaded += 1
+            }
+          }
+        }
+      }
+    }
+
+    println(" * Manual ratings loaded (number of keys: " + out.size + ", number of manual ratings: " + numRatingsLoaded + ")")
+
+    // Return
+    out.toMap
+  }
+
+
+  def summaryWithManualRatings(explQuestions: Array[MCExplQuestion], tablestore: TableStore, models: Array[Map[String, ArrayBuffer[String]]], manualRatings:Map[String, mutable.Map[String, Int]], topN:Int = 20): Unit = {
+    // For each model
+    for (modelIdx <- 0 until models.length) {
+      val model = models(modelIdx)
+
+      println ("Model " + modelIdx + ":  (topN = " + topN + ")")
+
+      // For each question
+      var numQuestions:Int = 0
+      val hist = new Counter[String]
+      for (question <- explQuestions) {
+        val qid = question.question.questionID
+        // Check to see if there are manual ratings for this question
+        if (manualRatings.contains(qid)) {
+          if (model.contains(qid)) {
+
+            for (j <- 0 until topN) { // Examine top 20 rows
+              val rankings = model(qid)
+              val rowUUID = rankings(j)
+
+              val manualRating = manualRatings(qid)(rowUUID)
+              hist.incrementCount(manualRating.toString)
+            }
+            numQuestions += 1
+          }
+        }
+      }
+
+      // Display histogram
+      println ("Histogram: (numQuestion = " + numQuestions + ")")
+      var sum:Double = 0
+      for (key <- hist.keySet) {
+        sum += hist.getCount(key)
+      }
+
+      for (i <- 0 until 5) {
+        val count = hist.getCount(i.toString)
+        val prop = count.toDouble / sum
+
+        println (i + ": \t" + count + "\t" + prop.formatted("%3.3f"))
+      }
+
+    }
+
+  }
+
+
   /*
    * Scores
    */
@@ -780,12 +924,25 @@ object ManualEval {
 
  */
 
+    /*
     for (i <- 0 until models.length) {
       val model = models(i)
       println ("Model: " + predictionFilenames(i))
 
       calculateScores(filteredQuestionsEval, tablestore, model, predictionFilenames(i))
     }
+     */
+
+
+
+    println ("")
+
+    for (question <- filteredQuestionsEval) {
+      displayModelPredictionsSummaryTSV(question, tablestore, models.toArray)
+    }
+
+    val manualRatings = loadManualRatingsTSV("manual-expl-ratings.tsv")
+    summaryWithManualRatings(filteredQuestionsEval, tablestore, models.toArray, manualRatings, topN = 20)
 
   }
 
