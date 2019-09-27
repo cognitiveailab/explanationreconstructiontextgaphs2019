@@ -307,7 +307,7 @@ object ManualEval {
   /*
    * Scores
    */
-  def calculateScores(questions:Array[MCExplQuestion], tablestore:TableStore, model:Map[String, ArrayBuffer[String]], textDesc:String = ""): Unit = {
+  def calculateScores(questions:Array[MCExplQuestion], tablestore:TableStore, model:Map[String, ArrayBuffer[String]], textDesc:String = "", lexOverlapOnlyContentTags:Boolean = true): Unit = {
     var numSamples:Double = 0
     var sumScores = new Counter[String]
     var sumSamples = new Counter[String]
@@ -335,7 +335,7 @@ object ManualEval {
         println ("")
         */
 
-        val scores = explRowPool.getScores()
+        val scores = explRowPool.getScores(onlyContentTags = lexOverlapOnlyContentTags)
         val scoreCounts = new Counter[String]
         //println ("Scores: " + scores)
 
@@ -367,6 +367,7 @@ object ManualEval {
     println ("Summary:   (n = " + numSamples + ")")
     //println (summaryAverageScores(sumScores, numSamples))
     println ( ExplanationRegeneration.summaryAverageScores2(sumScores, sumSamples) )
+    println ("lexOverlapOnlyContentTags: " + lexOverlapOnlyContentTags)
 
     println ("")
     println ("Errors encounterd with nan/invalid scores: " + errorsEncountered.length + " (" + errorsEncountered.mkString(", ") + ")")
@@ -924,17 +925,17 @@ object ManualEval {
 
  */
 
-    /*
+
     for (i <- 0 until models.length) {
       val model = models(i)
       println ("Model: " + predictionFilenames(i))
 
       calculateScores(filteredQuestionsEval, tablestore, model, predictionFilenames(i))
     }
-     */
 
 
 
+/*
     println ("")
 
     for (question <- filteredQuestionsEval) {
@@ -943,6 +944,7 @@ object ManualEval {
 
     val manualRatings = loadManualRatingsTSV("manual-expl-ratings.tsv")
     summaryWithManualRatings(filteredQuestionsEval, tablestore, models.toArray, manualRatings, topN = 20)
+*/
 
   }
 

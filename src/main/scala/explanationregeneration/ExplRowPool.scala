@@ -95,7 +95,7 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
   // MAP, by category (rows from retrieval, inference supporting, or complex inference type tables)
   // MAP, overall
 
-  def getScores():Counter[String] = {
+  def getScores(onlyContentTags:Boolean = false):Counter[String] = {
     val scores = new Counter[String]
 
     // Average precision
@@ -108,9 +108,14 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
     scores.setCount(SCORE_MAP_BACKGROUND, averagePrecisionBackground())
 
     // Average precision by lexical overlap
-    val (mapLexOverlap, mapNoOverlap) = averagePrecisionByLexicalOverlap(onlyContentTags = false)
+    val (mapLexOverlap, mapNoOverlap) = averagePrecisionByLexicalOverlap(onlyContentTags)
     scores.setCount(SCORE_MAP_LEXOVERLAP, mapLexOverlap)
     scores.setCount(SCORE_MAP_NOLEXOVERLAP, mapNoOverlap)
+
+    val (mapLexOverlap1W, mapLexOverlap2PW, mapNoOverlap1) = averagePrecisionByLexicalOverlap2(onlyContentTags)
+    scores.setCount(SCORE_MAP_LEXOVERLAP1W, mapLexOverlap1W)
+    scores.setCount(SCORE_MAP_LEXOVERLAP2PW, mapLexOverlap2PW)
+    //scores.setCount(SCORE_MAP_NOLEXOVERLAP, mapNoOverlap1)  // Already do this above
 
 
     // Average precision by table knowledge type (retrieval, inference supporting, complex inference)
@@ -374,6 +379,136 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
 
     // Step 5: Return
     (APLexOverlap, APNoOverlap)
+  }
+
+
+  def averagePrecisionByLexicalOverlap2(onlyContentTags:Boolean = true):(Double, Double, Double) = {
+    // Step 1: Find lemmas in question and a given answer candidate
+    val qWords = mutable.Set[String]()
+
+    // Edge case: Invalid answer candidate -- return 0 score
+    if (answerCandidate < 0) return (0, 0, 0)
+
+    // Question
+    for (sent <- question.question.annotation.sentences) {
+      val words = sent.words
+      val tags = sent.tags.get
+      for (i <- 0 until words.size) {
+        var tag = tags(i)
+        if (tag.length > 2) tag = tag.slice(0, 2)
+        if ((contentTags.contains(tag)) || (onlyContentTags == false)) {
+          if (words(i).length > 0) {
+            val word = words(i).toLowerCase
+            val lemma = LookupLemmatizer.getLemma(word)
+            qWords += word
+            qWords += lemma
+          }
+        }
+      }
+    }
+
+    // Answer
+    for (sent <- question.question.choices(answerCandidate).annotation.sentences) {
+      val words = sent.words
+      val tags = sent.tags.get
+      for (i <- 0 until words.size) {
+        var tag = tags(i)
+        if (tag.length > 2) tag = tag.slice(0, 2)
+        if ((contentTags.contains(tag)) || (onlyContentTags == false)) {
+          if (words(i).length > 0) {
+            val word = words(i).toLowerCase
+            val lemma = LookupLemmatizer.getLemma(word)
+            qWords += word
+            qWords += lemma
+          }
+        }
+      }
+    }
+
+
+    //## Debug:
+    //println ("Question and answer lemmas: " + qWords.mkString(", "))
+
+    // Step 2: Separate gold explanation rows into those with/without lexical overlap with the question/answer candidate
+    val goldExplRowsLexOverlap1WOnly = new ArrayBuffer[ExplanationRow]()
+    val goldExplRowsLexOverlap2PlusWords = new ArrayBuffer[ExplanationRow]()
+    val goldExplRowsNoOverlap = new ArrayBuffer[ExplanationRow]()
+
+    for (i <- 0 until question.expl.length) {
+      val explRow = question.expl(i)
+      val uid = explRow.uid
+      val row = tablestore.getRowByUID(uid)
+      val words = row.getRowWordsStr()
+
+      var numOverlappingWords:Int = 0
+      for (word <- words) {
+        val lemma = LookupLemmatizer.getLemma(word)
+        if ((qWords.contains(word)) || (qWords.contains(lemma))) {
+          numOverlappingWords += 1
+        }
+      }
+
+
+      if (numOverlappingWords == 0) {
+        goldExplRowsNoOverlap.append(explRow)
+      } else if (numOverlappingWords == 1) {
+        goldExplRowsLexOverlap1WOnly.append(explRow)
+      } else {
+        goldExplRowsLexOverlap2PlusWords.append(explRow)
+      }
+    }
+
+
+    // Step 3: Separate into rows with lexical overlap, and rows without lexical overlap
+    val rowEvalsLexOverlap1WOnly = new ArrayBuffer[RowEval]
+    val rowEvalsLexOverlap2PlusWords = new ArrayBuffer[RowEval]
+    val rowEvalsNoOverlap = new ArrayBuffer[RowEval]
+
+    for (i <- 0 until rowEvals.length) {
+      val rowEval = rowEvals(i)
+      val row = rowEval.row
+      val words = row.getRowWordsStr()
+
+      var numOverlappingWords:Int = 0
+      for (word <- words) {
+        val lemma = LookupLemmatizer.getLemma(word)
+        if ((qWords.contains(word)) || (qWords.contains(lemma))) {
+          numOverlappingWords += 1
+        }
+      }
+
+      if (numOverlappingWords == 0) {
+        rowEvalsNoOverlap.append(rowEval)
+      } else if (numOverlappingWords == 1) {
+        rowEvalsLexOverlap1WOnly.append(rowEval)
+      } else {
+        rowEvalsLexOverlap2PlusWords.append(rowEval)
+      }
+    }
+
+
+    // Step 4: Compute average precision
+    val ranksLexOverlap1WOnly = ranksOfCorrectRowsHelper(goldExplRowsLexOverlap1WOnly.toArray, rowEvalsLexOverlap1WOnly.toArray)
+    var APLexOverlap1WOnly = calculateAPFromRanks(ranksLexOverlap1WOnly)
+    // If the AP is zero, it means all elements from that category were removed -- set the score as NaN so we don't count this sample
+    if (APLexOverlap1WOnly == 0.0) APLexOverlap1WOnly == Double.NaN
+
+    val ranksLexOverlapwPlusWords = ranksOfCorrectRowsHelper(goldExplRowsLexOverlap2PlusWords.toArray, rowEvalsLexOverlap2PlusWords.toArray)
+    var APLexOverlap2PlusWords = calculateAPFromRanks(ranksLexOverlapwPlusWords)
+    // If the AP is zero, it means all elements from that category were removed -- set the score as NaN so we don't count this sample
+    if (APLexOverlap2PlusWords == 0.0) APLexOverlap2PlusWords == Double.NaN
+
+    val ranksNoOverlap = ranksOfCorrectRowsHelper(goldExplRowsNoOverlap.toArray, rowEvalsNoOverlap.toArray)
+    var APNoOverlap = calculateAPFromRanks(ranksNoOverlap)
+    // If the AP is zero, it means all elements from that category were removed -- set the score as NaN so we don't count this sample
+    if (APNoOverlap == 0.0) APNoOverlap == Double.NaN
+
+
+    //println ("Ranks of correct rows (lexical overlap subset) (AP = " + APLexOverlap.formatted("%3.4f") + ") : " + ranksLexOverlap.mkString(", "))
+    //println ("Ranks of correct rows (no lexical overlap subset) (AP = " + APNoOverlap.formatted("%3.4f") + ") : " + ranksNoOverlap.mkString(", "))
+
+    // Step 5: Return
+    (APLexOverlap1WOnly, APLexOverlap2PlusWords, APNoOverlap)
   }
 
 
@@ -672,6 +807,8 @@ object ExplRowPool {
   val SCORE_MAP_LEXGLUE         = "MAP_LEXGLUE"
   val SCORE_MAP_BACKGROUND      = "MAP_BACKGROUND"
   val SCORE_MAP_LEXOVERLAP      = "MAP_LEXOVERLAP"
+  val SCORE_MAP_LEXOVERLAP1W    = "MAP_LEXOVERLAP1W"
+  val SCORE_MAP_LEXOVERLAP2PW   = "MAP_LEXOVERLAP2PW"
   val SCORE_MAP_NOLEXOVERLAP    = "MAP_NOLEXOVERLAP"
   val SCORE_MAP_TABKT_RET       = "MAP_TABKT_RET"
   val SCORE_MAP_TABKT_RETLEX    = "MAP_TABKT_RET/LEX"
