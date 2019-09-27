@@ -230,7 +230,7 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
     var APRole = calculateAPFromRanks(ranksRole)
 
     // If the AP is zero, it means all elements from that role were removed -- set the score as NaN so we don't count this sample
-    if (APRole == 0.0) APRole == Double.NaN
+    if (APRole == 0.0) APRole = Double.NaN
 
     //println ("Ranks of correct rows (ROLE: " + role + ") (AP = " + APRole.formatted("%3.4f") + ") : " + ranksRole.mkString(", "))
 
@@ -365,13 +365,13 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
     val ranksLexOverlap = ranksOfCorrectRowsHelper(goldExplRowsLexOverlap.toArray, rowEvalsLexOverlap.toArray)
     var APLexOverlap = calculateAPFromRanks(ranksLexOverlap)
     // If the AP is zero, it means all elements from that category were removed -- set the score as NaN so we don't count this sample
-    if (APLexOverlap == 0.0) APLexOverlap == Double.NaN
+    if (APLexOverlap == 0.0) APLexOverlap = Double.NaN
 
 
     val ranksNoOverlap = ranksOfCorrectRowsHelper(goldExplRowsNoOverlap.toArray, rowEvalsNoOverlap.toArray)
     var APNoOverlap = calculateAPFromRanks(ranksNoOverlap)
     // If the AP is zero, it means all elements from that category were removed -- set the score as NaN so we don't count this sample
-    if (APNoOverlap == 0.0) APNoOverlap == Double.NaN
+    if (APNoOverlap == 0.0) APNoOverlap = Double.NaN
 
 
     //println ("Ranks of correct rows (lexical overlap subset) (AP = " + APLexOverlap.formatted("%3.4f") + ") : " + ranksLexOverlap.mkString(", "))
@@ -491,17 +491,17 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
     val ranksLexOverlap1WOnly = ranksOfCorrectRowsHelper(goldExplRowsLexOverlap1WOnly.toArray, rowEvalsLexOverlap1WOnly.toArray)
     var APLexOverlap1WOnly = calculateAPFromRanks(ranksLexOverlap1WOnly)
     // If the AP is zero, it means all elements from that category were removed -- set the score as NaN so we don't count this sample
-    if (APLexOverlap1WOnly == 0.0) APLexOverlap1WOnly == Double.NaN
+    if (APLexOverlap1WOnly == 0.0) APLexOverlap1WOnly = Double.NaN
 
     val ranksLexOverlapwPlusWords = ranksOfCorrectRowsHelper(goldExplRowsLexOverlap2PlusWords.toArray, rowEvalsLexOverlap2PlusWords.toArray)
     var APLexOverlap2PlusWords = calculateAPFromRanks(ranksLexOverlapwPlusWords)
     // If the AP is zero, it means all elements from that category were removed -- set the score as NaN so we don't count this sample
-    if (APLexOverlap2PlusWords == 0.0) APLexOverlap2PlusWords == Double.NaN
+    if (APLexOverlap2PlusWords == 0.0) APLexOverlap2PlusWords = Double.NaN
 
     val ranksNoOverlap = ranksOfCorrectRowsHelper(goldExplRowsNoOverlap.toArray, rowEvalsNoOverlap.toArray)
     var APNoOverlap = calculateAPFromRanks(ranksNoOverlap)
     // If the AP is zero, it means all elements from that category were removed -- set the score as NaN so we don't count this sample
-    if (APNoOverlap == 0.0) APNoOverlap == Double.NaN
+    if (APNoOverlap == 0.0) APNoOverlap = Double.NaN
 
 
     //println ("Ranks of correct rows (lexical overlap subset) (AP = " + APLexOverlap.formatted("%3.4f") + ") : " + ranksLexOverlap.mkString(", "))
@@ -712,6 +712,8 @@ class ExplRowPool(val question:MCExplQuestion, answerCandidate:Int, tablestore:T
     os.append(" Precision@" + 10 + ": " + precisionAtN(10).formatted("%3.3f") + "\n")
     os.append(" Precision@" + 20 + ": " + precisionAtN(20).formatted("%3.3f") + "\n")
 
+
+    println ("Scores: " + getScores(onlyContentTags = false))
 
 
     // Return

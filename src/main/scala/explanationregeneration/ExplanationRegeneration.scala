@@ -486,16 +486,26 @@ object ExplanationRegeneration {
     os.toString()
   }
 
-  def summaryAverageScores2(sumScores:Counter[String], sampleCounts:Counter[String]):String = {
+  def summaryAverageScores2(questionScores:Array[Counter[String]]):String = {
     val os = new StringBuilder
 
     // Step 1: Average the scores
     val avgScores = new Counter[String]
-    for (key <- sumScores.keySet) {
-      var average:Double = 0.0f
-      val numSamples = sampleCounts.getCount(key)
-      average = sumScores.getCount(key) / numSamples
-      avgScores.setCount(key, average)
+    val sampleCounts = new Counter[String]
+    for (qScore <- questionScores) {
+      for (key <- qScore.keySet) {
+        val value = qScore.getCount(key)
+        if ((!value.isNaN) && (!value.isInfinite)) {
+          //println ("value: " + value)
+          avgScores.incrementCount(key, value)
+          sampleCounts.incrementCount(key, 1.0)
+        }
+      }
+    }
+
+    // Average
+    for (key <- avgScores.keySet) {
+      avgScores.setCount(key, avgScores.getCount(key) / sampleCounts.getCount(key))
     }
 
     println( "avgScores: " + avgScores.sorted(descending = true) )
@@ -509,29 +519,29 @@ object ExplanationRegeneration {
 
     os.append("MAP: " + avgScores.getCount(SCORE_MAP).formatted("%3.4f") + "\n")
     os.append("\n")
-    os.append("MAP_ROLE_CENTRAL:     " + avgScores.getCount(SCORE_MAP_CENTRAL).formatted("%3.4f") + "\n")
-    os.append("MAP_ROLE_GROUNDING:   " + avgScores.getCount(SCORE_MAP_GROUNDING).formatted("%3.4f") + "\n")
-    os.append("MAP_ROLE_LEXGLUE:     " + avgScores.getCount(SCORE_MAP_LEXGLUE).formatted("%3.4f") + "\n")
-    os.append("MAP_ROLE_BACKGROUND:  " + avgScores.getCount(SCORE_MAP_BACKGROUND).formatted("%3.4f") + "\n")
+    os.append("MAP_ROLE_CENTRAL:     " + avgScores.getCount(SCORE_MAP_CENTRAL).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_MAP_CENTRAL).formatted("%3.0f") + ")\n")
+    os.append("MAP_ROLE_GROUNDING:   " + avgScores.getCount(SCORE_MAP_GROUNDING).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_MAP_GROUNDING).formatted("%3.0f") + ")\n")
+    os.append("MAP_ROLE_LEXGLUE:     " + avgScores.getCount(SCORE_MAP_LEXGLUE).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_MAP_LEXGLUE).formatted("%3.0f") + ")\n")
+    os.append("MAP_ROLE_BACKGROUND:  " + avgScores.getCount(SCORE_MAP_BACKGROUND).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_MAP_BACKGROUND).formatted("%3.0f") + ")\n")
     os.append("\n")
-    os.append("MAP_LEXOVERLAP1WOnly: " + avgScores.getCount(SCORE_MAP_LEXOVERLAP1W).formatted("%3.4f") + "\n")
-    os.append("MAP_LEXOVERLAP2+W:    " + avgScores.getCount(SCORE_MAP_LEXOVERLAP2PW).formatted("%3.4f") + "\n")
-    os.append("MAP_LEXOVERLAP:       " + avgScores.getCount(SCORE_MAP_LEXOVERLAP).formatted("%3.4f") + "\n")
-    os.append("MAP_NOLEXOVERLAP:     " + avgScores.getCount(SCORE_MAP_NOLEXOVERLAP).formatted("%3.4f") + "\n")
+    os.append("MAP_LEXOVERLAP2+W:    " + avgScores.getCount(SCORE_MAP_LEXOVERLAP2PW).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_MAP_LEXOVERLAP2PW).formatted("%3.0f") + ")\n")
+    os.append("MAP_LEXOVERLAP1WOnly: " + avgScores.getCount(SCORE_MAP_LEXOVERLAP1W).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_MAP_LEXOVERLAP1W).formatted("%3.0f") + ")\n")
+    os.append("MAP_LEXOVERLAP:       " + avgScores.getCount(SCORE_MAP_LEXOVERLAP).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_MAP_LEXOVERLAP).formatted("%3.0f") + ")\n")
+    os.append("MAP_NOLEXOVERLAP:     " + avgScores.getCount(SCORE_MAP_NOLEXOVERLAP).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_MAP_NOLEXOVERLAP).formatted("%3.0f") + ")\n")
 
     os.append("\n")
-    os.append("MAP_TABKT_RET:        " + avgScores.getCount(SCORE_MAP_TABKT_RET).formatted("%3.4f") + "\n")
-    os.append("MAP_TABKT_RET/LEX:    " + avgScores.getCount(SCORE_MAP_TABKT_RETLEX).formatted("%3.4f") + "\n")
-    os.append("MAP_TABKT_INFSUPP:    " + avgScores.getCount(SCORE_MAP_TABKT_INFSUPP).formatted("%3.4f") + "\n")
-    os.append("MAP_TABKT_COMPLEX:    " + avgScores.getCount(SCORE_MAP_TABKT_COMPLEX).formatted("%3.4f") + "\n")
+    os.append("MAP_TABKT_RET:        " + avgScores.getCount(SCORE_MAP_TABKT_RET).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_MAP_TABKT_RET).formatted("%3.0f") + ")\n")
+    os.append("MAP_TABKT_RET/LEX:    " + avgScores.getCount(SCORE_MAP_TABKT_RETLEX).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_MAP_TABKT_RETLEX).formatted("%3.0f") + ")\n")
+    os.append("MAP_TABKT_INFSUPP:    " + avgScores.getCount(SCORE_MAP_TABKT_INFSUPP).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_MAP_TABKT_INFSUPP).formatted("%3.0f") + ")\n")
+    os.append("MAP_TABKT_COMPLEX:    " + avgScores.getCount(SCORE_MAP_TABKT_COMPLEX).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_MAP_TABKT_COMPLEX).formatted("%3.0f") + ")\n")
     os.append("\n")
-    os.append("Precision@1           " + avgScores.getCount(SCORE_PRECISIONAT1).formatted("%3.4f") + "\n")
-    os.append("Precision@2           " + avgScores.getCount(SCORE_PRECISIONAT2).formatted("%3.4f") + "\n")
-    os.append("Precision@3           " + avgScores.getCount(SCORE_PRECISIONAT3).formatted("%3.4f") + "\n")
-    os.append("Precision@4           " + avgScores.getCount(SCORE_PRECISIONAT4).formatted("%3.4f") + "\n")
-    os.append("Precision@5           " + avgScores.getCount(SCORE_PRECISIONAT5).formatted("%3.4f") + "\n")
-    os.append("Precision@10          " + avgScores.getCount(SCORE_PRECISIONAT10).formatted("%3.4f") + "\n")
-    os.append("Precision@20          " + avgScores.getCount(SCORE_PRECISIONAT20).formatted("%3.4f") + "\n")
+    os.append("Precision@1           " + avgScores.getCount(SCORE_PRECISIONAT1).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_PRECISIONAT1).formatted("%3.0f") + ")\n")
+    os.append("Precision@2           " + avgScores.getCount(SCORE_PRECISIONAT2).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_PRECISIONAT2).formatted("%3.0f") + ")\n")
+    os.append("Precision@3           " + avgScores.getCount(SCORE_PRECISIONAT3).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_PRECISIONAT3).formatted("%3.0f") + ")\n")
+    os.append("Precision@4           " + avgScores.getCount(SCORE_PRECISIONAT4).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_PRECISIONAT4).formatted("%3.0f") + ")\n")
+    os.append("Precision@5           " + avgScores.getCount(SCORE_PRECISIONAT5).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_PRECISIONAT5).formatted("%3.0f") + ")\n")
+    os.append("Precision@10          " + avgScores.getCount(SCORE_PRECISIONAT10).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_PRECISIONAT10).formatted("%3.0f") + ")\n")
+    os.append("Precision@20          " + avgScores.getCount(SCORE_PRECISIONAT20).formatted("%3.4f") + "\t(" + sampleCounts.getCount(SCORE_PRECISIONAT20).formatted("%3.0f") + ")\n")
     os.append("\n")
 
     // Return

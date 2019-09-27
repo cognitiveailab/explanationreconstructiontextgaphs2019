@@ -307,11 +307,11 @@ object ManualEval {
   /*
    * Scores
    */
-  def calculateScores(questions:Array[MCExplQuestion], tablestore:TableStore, model:Map[String, ArrayBuffer[String]], textDesc:String = "", lexOverlapOnlyContentTags:Boolean = true): Unit = {
+  def calculateScores(questions:Array[MCExplQuestion], tablestore:TableStore, model:Map[String, ArrayBuffer[String]], textDesc:String = "", lexOverlapOnlyContentTags:Boolean = false): Unit = {
     var numSamples:Double = 0
-    var sumScores = new Counter[String]
-    var sumSamples = new Counter[String]
     val errorsEncountered = new ArrayBuffer[Int]
+
+    val questionScores = new ArrayBuffer[Counter[String]]
 
     for (i <- 0 until questions.length) {
       val question = questions(i)
@@ -333,13 +333,13 @@ object ManualEval {
         println ("ExplRowPool: ")
         println (explRowPool.toString())
         println ("")
-        */
+         */
 
         val scores = explRowPool.getScores(onlyContentTags = lexOverlapOnlyContentTags)
-        val scoreCounts = new Counter[String]
         //println ("Scores: " + scores)
 
         // Check for errors/infinities in the scores
+        /*
         breakable {
           // Check for errors/infinities
           for (key <- scores.keySet) {
@@ -350,15 +350,15 @@ object ManualEval {
 
                 println("ERROR/INFINITY/NAN!")
                 errorsEncountered.append(i)
-              } else {
-                scoreCounts.incrementCount(key)
               }
           }
-          // Not found -- record scores
-          sumScores += scores
-          sumSamples += scoreCounts
-          numSamples += 1
         }
+        */
+        // Not found -- record scores
+        questionScores.append( scores )
+
+        numSamples += 1
+
       }
 
     }
@@ -366,7 +366,7 @@ object ManualEval {
     println ("Text Description: " + textDesc)
     println ("Summary:   (n = " + numSamples + ")")
     //println (summaryAverageScores(sumScores, numSamples))
-    println ( ExplanationRegeneration.summaryAverageScores2(sumScores, sumSamples) )
+    println ( ExplanationRegeneration.summaryAverageScores2(questionScores.toArray) )
     println ("lexOverlapOnlyContentTags: " + lexOverlapOnlyContentTags)
 
     println ("")
